@@ -1,0 +1,1 @@
+The materials visualization package provides various functions to view atomic models in IPython or jupyter notebooks.
