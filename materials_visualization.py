@@ -2,7 +2,7 @@ import nglview
 import math
 from ipywidgets import HBox, VBox, Label
 
-def show_ngl_row(mols, show_indices=False, captions=None, trajectories=False):
+def show_ngl_row(mols, show_indices=False, captions=None, trajectories=False, view_axis='y'):
     full_width = 1500
     w = full_width//len(mols)
     if trajectories:
@@ -19,8 +19,15 @@ def show_ngl_row(mols, show_indices=False, captions=None, trajectories=False):
         # Set width of each view
         view._remote_call('setSize', target='Widget', args=[f'{w}px',f'400px'])
 
-        # We usually want to view the xz plane of a unit cell
-        view.control.spin([1, 0, 0], math.pi/2)
+        # The default view axis is z
+        if view_axis == 'x':
+            view.control.spin([1, 0, 0], math.pi/2)
+            view.control.spin([0, 1, 0], math.pi/2)
+        elif view_axis == 'z':
+            continue
+        else:
+            # view along the y (normal to xz plane) by default
+            view.control.spin([1, 0, 0], math.pi / 2)
 
         # Add axes
         view.add_representation(repr_type='unitcell')
