@@ -141,3 +141,27 @@ def plot_total_displacement(starting_structure_filename, trajectory_filenames, l
     plt.ylabel('Total Displacement (Angstrom)')
     plt.legend()        
     plt.show()
+
+
+def plot_unit_cell_volume_change(trajectory_filenames, labels):
+
+    if type(trajectory_filenames) is not list:
+        trajectory_filenames = [trajectory_filenames]
+
+    if type(labels) is not list:
+        labels = [labels]
+
+    fig = plt.figure()
+
+    for filename, label in zip(trajectory_filenames, labels):
+        traj = Trajectory(filename)
+        plt.plot(list(range(len(traj))),
+                 [round((atoms.get_volume() - traj[0].get_volume()) / traj[0].get_volume() * 100.0, 2) for atoms in
+                  traj], label=label + ': $\Delta$V=' + str(
+                round((traj[-1].get_volume() - traj[0].get_volume()) / traj[0].get_volume() * 100.0, 2)) + '%')
+
+    plt.plot(plt.xlim(), [0, 0], '--', color='0.5')
+    plt.xlabel('Step')
+    plt.ylabel('% Volume Change')
+    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    return fig
