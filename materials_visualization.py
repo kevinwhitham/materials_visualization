@@ -3,6 +3,9 @@ import math
 from ipywidgets import HBox, VBox, Label
 
 def show_ngl_row(mols, show_indices=False, captions=None, trajectories=False, view_axis='y'):
+
+    mols = make_list(mols)
+
     full_width = 1500
     w = full_width//len(mols)
     if trajectories:
@@ -57,6 +60,10 @@ def plot_fmax_vs_time(timing_filenames, labels=None):
     :param labels: [List] optional labels for plot legend, otherwise will use filenames
     :return: None
     '''
+
+    timing_filenames = make_list(timing_filenames)
+    if labels:
+        labels = make_list(labels)
     
     # Create a new figure
     fig = plt.figure()
@@ -136,6 +143,9 @@ import matplotlib.pyplot as plt
 def plot_total_displacement(starting_structure_filename, trajectory_filenames, labels):
     starting_structure = read(starting_structure_filename)
 
+    trajectory_filenames = make_list(trajectory_filenames)
+    labels = make_list(labels)
+
     for file, label in zip(trajectory_filenames,labels):
             traj = Trajectory(file)
             disp = []
@@ -152,11 +162,8 @@ def plot_total_displacement(starting_structure_filename, trajectory_filenames, l
 
 def plot_unit_cell_volume_change(trajectory_filenames, labels):
 
-    if type(trajectory_filenames) is not list:
-        trajectory_filenames = [trajectory_filenames]
-
-    if type(labels) is not list:
-        labels = [labels]
+    trajectory_filenames = make_list(trajectory_filenames)
+    labels = make_list(labels)
 
     fig = plt.figure()
 
@@ -172,3 +179,8 @@ def plot_unit_cell_volume_change(trajectory_filenames, labels):
     plt.ylabel('% Volume Change')
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     return fig
+
+def make_list(obj):
+    if type(obj) is not list:
+        obj = [obj]
+    return obj
