@@ -123,7 +123,7 @@ def plot_fmax_vs_time(timing_filenames, labels=None):
                     dt.iloc[i] = timedelta(0)
         
         # Plot time in units of hours
-        plt.plot([td.days*24+td.seconds/3600 for td in dt.cumsum()], timing_data['fmax'], '-o', label=label)
+        plt.plot([td.days*24+td.seconds/3600 for td in dt.cumsum()], timing_data['fmax'], '-', label=label)
         timing_summary = timing_summary.append(pd.DataFrame(data=[[timing_file,len(timing_data)]], columns=summary_col_names), ignore_index=True)
 
     display(timing_summary)  
