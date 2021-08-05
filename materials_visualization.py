@@ -2,7 +2,7 @@ import nglview
 import math
 from ipywidgets import HBox, VBox, Label
 
-def show_ngl_row(mols, show_indices=False, captions=None, trajectories=False, view_axis='y'):
+def show_ngl_row(mols, show_indices=False, captions=None, trajectories=False, view_axis='y', show_cell=True):
 
     mols = make_list(mols)
 
@@ -33,7 +33,8 @@ def show_ngl_row(mols, show_indices=False, captions=None, trajectories=False, vi
             view.control.spin([1, 0, 0], math.pi / 2)
 
         # Add axes
-        view.add_representation(repr_type='unitcell')
+        if show_cell:
+            view.add_representation(repr_type='unitcell')
 
         # Set view to orthographic
         view.camera = 'orthographic'
