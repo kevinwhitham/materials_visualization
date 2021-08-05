@@ -141,9 +141,7 @@ from ase.io import Trajectory
 import numpy as np
 import matplotlib.pyplot as plt
 
-def plot_total_displacement(starting_structure_filename, trajectory_filenames, labels):
-    starting_structure = read(starting_structure_filename)
-
+def plot_total_displacement(trajectory_filenames, labels):
     trajectory_filenames = make_list(trajectory_filenames)
     labels = make_list(labels)
 
@@ -151,7 +149,7 @@ def plot_total_displacement(starting_structure_filename, trajectory_filenames, l
             traj = Trajectory(file)
             disp = []
             for atoms in traj:
-                disp.append(np.sum(np.sqrt(np.sum((starting_structure.positions - atoms.positions)**2, axis=1))))
+                disp.append(np.sum(np.sqrt(np.sum((traj[0].positions - atoms.positions)**2, axis=1))))
 
             plt.plot(disp, label=label)
 
