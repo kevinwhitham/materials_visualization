@@ -139,7 +139,6 @@ def plot_fmax_vs_time(timing_filenames, labels=None):
 from ase.io import read
 from ase.io import Trajectory
 import numpy as np
-import matplotlib.pyplot as plt
 
 def plot_total_displacement(trajectory_filenames, labels):
     trajectory_filenames = make_list(trajectory_filenames)
@@ -159,15 +158,17 @@ def plot_total_displacement(trajectory_filenames, labels):
     plt.show()
 
 
-def plot_unit_cell_volume_change(trajectory_filenames, labels):
+def plot_unit_cell_volume_change(trajectories, labels):
 
-    trajectory_filenames = make_list(trajectory_filenames)
+    trajectories = make_list(trajectories)
     labels = make_list(labels)
 
     fig = plt.figure()
 
-    for filename, label in zip(trajectory_filenames, labels):
-        traj = Trajectory(filename)
+    for traj, label in zip(trajectories, labels):
+        if type(traj) == str:
+            traj = Trajectory(traj)
+
         plt.plot(list(range(len(traj))),
                  [round((atoms.get_volume() - traj[0].get_volume()) / traj[0].get_volume() * 100.0, 2) for atoms in
                   traj], label=label + ': $\Delta$V=' + str(
