@@ -144,6 +144,8 @@ def plot_total_displacement(trajectory_filenames, labels):
     trajectory_filenames = make_list(trajectory_filenames)
     labels = make_list(labels)
 
+    fig = plt.figure()
+
     for file, label in zip(trajectory_filenames,labels):
             traj = Trajectory(file)
             disp = []
@@ -155,7 +157,7 @@ def plot_total_displacement(trajectory_filenames, labels):
     plt.xlabel('Iteration')        
     plt.ylabel('Total Displacement (Angstrom)')
     plt.legend()        
-    plt.show()
+    return fig
 
 
 def plot_unit_cell_volume_change(trajectories, labels):
