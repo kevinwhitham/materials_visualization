@@ -2,12 +2,12 @@ import nglview
 import math
 from ipywidgets import HBox, VBox, Label
 
-def show_ngl_row(mols, show_indices=False, captions=None, trajectories=False, view_axis='y', show_cell=True):
 
+def show_ngl_row(mols, show_indices=False, captions=None, trajectories=False, view_axis='y', show_cell=True):
     mols = make_list(mols)
 
     full_width = 1500
-    w = full_width//len(mols)
+    w = full_width // len(mols)
     if trajectories:
         views = [nglview.show_asetraj(mol) for mol in mols]
     else:
@@ -20,12 +20,12 @@ def show_ngl_row(mols, show_indices=False, captions=None, trajectories=False, vi
             view.add_label(labelType='atomindex', color='black')
 
         # Set width of each view
-        view._remote_call('setSize', target='Widget', args=[f'{w}px',f'400px'])
+        view._remote_call('setSize', target='Widget', args=[f'{w}px', f'400px'])
 
         # The default view axis is z
         if view_axis == 'x':
-            view.control.spin([1, 0, 0], math.pi/2)
-            view.control.spin([0, 1, 0], math.pi/2)
+            view.control.spin([1, 0, 0], math.pi / 2)
+            view.control.spin([0, 1, 0], math.pi / 2)
         elif view_axis == 'z':
             continue
         else:
@@ -38,20 +38,22 @@ def show_ngl_row(mols, show_indices=False, captions=None, trajectories=False, vi
 
         # Set view to orthographic
         view.camera = 'orthographic'
-    
+
     result = HBox(views)
-    
+
     if captions:
         if len(captions) == len(mols):
-            result = HBox([VBox([v,Label(c)]) for v,c in zip(views,captions)])
+            result = HBox([VBox([v, Label(c)]) for v, c in zip(views, captions)])
             for view in views:
                 view.center()
-    
+
     return result
+
 
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import timedelta
+
 
 def plot_fmax_vs_time(timing_filenames, labels=None):
     '''
@@ -65,14 +67,14 @@ def plot_fmax_vs_time(timing_filenames, labels=None):
     timing_filenames = make_list(timing_filenames)
     if labels:
         labels = make_list(labels)
-    
+
     # Create a new figure
     fig = plt.figure()
 
     summary_col_names = ['File', 'iterations']
     timing_summary = pd.DataFrame(data=None, columns=summary_col_names)
     for i, timing_file in enumerate(timing_filenames):
-      
+
         # if labels are supplied, use them in the plot legend
         label = None
         if labels != None:
@@ -86,25 +88,27 @@ def plot_fmax_vs_time(timing_filenames, labels=None):
         # Get the type of optimization so we can interpret the log data
         # Sometimes there is no header, sometimes 1 line, sometimes 2 lines, so we skip the first 2
         # Hopefully there is more than two rows of data in the file
-        logfile_contents = pd.read_table(timing_file, skiprows=[0,1], sep=r'\s+', error_bad_lines=False)
+        logfile_contents = pd.read_table(timing_file, skiprows=[0, 1], sep=r'\s+', error_bad_lines=False)
 
-        algo_name = logfile_contents.iloc[-1,0]
-        #print('Algorithm name:', algo_name)
+        algo_name = logfile_contents.iloc[-1, 0]
+        # print('Algorithm name:', algo_name)
 
         # Default formatting options
-        header=0
-        cols = [1,2,3,4]
+        header = 0
+        cols = [1, 2, 3, 4]
         skiprows = None
         col_names = ['Step', 'Time', 'Energy', 'fmax']
 
         # Choose formatting based on algorithm name
         if 'bfgslinesearch' in str(algo_name).lower():
-            cols = [1,3,4,5]
+            cols = [1, 3, 4, 5]
             col_names = ['Step', 'FC', 'Time', 'Energy', 'fmax']
         elif 'precon' in str(algo_name).lower():
-            header=None
+            header = None
 
-        timing_data = pd.read_table(timing_file, header=header, index_col=1, names=col_names, parse_dates=['Time'], infer_datetime_format=True, sep=r'\[*\s+|\]\s+', engine='python', error_bad_lines=False)
+        timing_data = pd.read_table(timing_file, header=header, index_col=1, names=col_names, parse_dates=['Time'],
+                                    infer_datetime_format=True, sep=r'\[*\s+|\]\s+', engine='python',
+                                    error_bad_lines=False)
 
         # Correct for change of day in elapsed time
         dt = timing_data['Time'].diff()
@@ -119,14 +123,15 @@ def plot_fmax_vs_time(timing_filenames, labels=None):
             # we could set time of the first step equal to the time of the previous or next step
             # or just set the time difference to zero
             if i > 0:
-                if (timing_data.index[i] - timing_data.index[i-1]) < 1:
+                if (timing_data.index[i] - timing_data.index[i - 1]) < 1:
                     dt.iloc[i] = timedelta(0)
-        
-        # Plot time in units of hours
-        plt.plot([td.days*24+td.seconds/3600 for td in dt.cumsum()], timing_data['fmax'], '-', label=label)
-        timing_summary = timing_summary.append(pd.DataFrame(data=[[timing_file,len(timing_data)]], columns=summary_col_names), ignore_index=True)
 
-    display(timing_summary)  
+        # Plot time in units of hours
+        plt.plot([td.days * 24 + td.seconds / 3600 for td in dt.cumsum()], timing_data['fmax'], '-', label=label)
+        timing_summary = timing_summary.append(
+            pd.DataFrame(data=[[timing_file, len(timing_data)]], columns=summary_col_names), ignore_index=True)
+
+    display(timing_summary)
     plt.tight_layout()
     plt.yscale('log')
     plt.xlabel('Time (hours)')
@@ -136,9 +141,11 @@ def plot_fmax_vs_time(timing_filenames, labels=None):
 
     return fig
 
+
 from ase.io import read
 from ase.io import Trajectory
 import numpy as np
+
 
 def plot_total_displacement(trajectory_filenames, labels):
     trajectory_filenames = make_list(trajectory_filenames)
@@ -146,21 +153,27 @@ def plot_total_displacement(trajectory_filenames, labels):
 
     fig = plt.figure()
 
-    for file, label in zip(trajectory_filenames,labels):
-            traj = Trajectory(file)
-            disp = []
-            for atoms in traj:
-                disp.append(np.sum(np.sqrt(np.sum((traj[0].positions - atoms.positions)**2, axis=1))))
+    for file, label in zip(trajectory_filenames, labels):
+        traj = Trajectory(file)
+        disp = []
+        for atoms in traj:
+            disp.append(np.sum(np.sqrt(np.sum((traj[0].positions - atoms.positions) ** 2, axis=1))))
 
-            plt.plot(disp, label=label)
+        plt.plot(disp, label=label)
 
-    plt.xlabel('Iteration')        
+    plt.xlabel('Iteration')
     plt.ylabel('Total Displacement (Angstrom)')
-    plt.legend()        
+    plt.legend()
     return fig
 
 
 def plot_unit_cell_volume_change(trajectories, labels):
+    '''
+    Plot relative change in unit cell volume.
+    :param trajectories: .traj filenames or Trajectory objects
+    :param labels: strings for plot legend
+    :return: matplotlib figure
+    '''
 
     trajectories = make_list(trajectories)
     labels = make_list(labels)
@@ -185,7 +198,16 @@ def plot_unit_cell_volume_change(trajectories, labels):
 
 from ase.io.vasp import read_vasp_out
 
+
 def vasp_to_trajectory(outcar_filenames, trajectory_filename):
+    '''
+    Convert and concatenate VASP OUTCAR files to ASE Trajectory
+
+    :param [list,str] outcar_filenames:  paths to OUTCAR files to convert
+    :param str trajectory_filename: path to save trajectory file
+    :return Trajectory:
+    '''
+
     outcar_filenames = make_list(outcar_filenames)
 
     atoms_list = []
@@ -199,6 +221,7 @@ def vasp_to_trajectory(outcar_filenames, trajectory_filename):
         traj.write(atoms)
 
     return Trajectory(trajectory_filename)
+
 
 def make_list(obj):
     if type(obj) is not list:
