@@ -182,6 +182,23 @@ def plot_unit_cell_volume_change(trajectories, labels):
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     return fig
 
+
+def vasp_to_trajectory(outcar_filenames, trajectory_filename):
+    if type(outcar_filenames) != list:
+        outcar_filenames = [outcar_filenames]
+
+    atoms_list = []
+    for f in outcar_filenames:
+        before_len = len(atoms_list)
+        atoms_list += read_vasp_out(f, index=':')
+        print(f'{f} added {len(atoms_list) - before_len} steps.')
+
+    traj = Trajectory(trajectory_filename, mode='w')
+    for atoms in atoms_list:
+        traj.write(atoms)
+
+    return Trajectory(trajectory_filename)
+
 def make_list(obj):
     if type(obj) is not list:
         obj = [obj]
