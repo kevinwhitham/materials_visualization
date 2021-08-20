@@ -186,8 +186,7 @@ def plot_unit_cell_volume_change(trajectories, labels):
 from ase.io.vasp import read_vasp_out
 
 def vasp_to_trajectory(outcar_filenames, trajectory_filename):
-    if type(outcar_filenames) != list:
-        outcar_filenames = [outcar_filenames]
+    outcar_filenames = make_list(outcar_filenames)
 
     atoms_list = []
     for f in outcar_filenames:
