@@ -195,6 +195,83 @@ def plot_unit_cell_volume_change(trajectories, labels):
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     return fig
 
+def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, trajectory, plane_of_interest='xy'):
+    '''
+    Plots the angle connecting octahedral centers over a trajectory.
+    :param center_atom_symbol: name of atom at octahedral centers (e.g. 'Pb')
+    :type center_atom_symbol: str
+    :param vertex_atom_symbol: name of atom at octahedral vertices (e.g. 'I')
+    :type vertex_atom_symbol: str
+    :param trajectory: ASE trajectory
+    :param plane_of_interest: way to specify equitorial plane (e.g. 'xy')
+    :type plane_of_interest: str
+    :return: figure
+    :rtype: matplotlib.figure
+    '''
+
+    if 'x' not in plane_of_interest:
+        apical_axis = 0
+    elif 'y' not in plane_of_interest:
+        apical_axis = 1
+    else:
+        apical_axis = 2
+
+    # DataFrame to hold the angle data
+    angle_data = pd.DataFrame()
+    distance_data = pd.DataFrame()
+
+    # Step through the trajectory
+    for step,atoms in enumerate(trajectory):
+        # For each center atom, find the nearest 6 atoms of vertex type
+        all_center_atom_indices = np.array([a.index for a in atoms if a.symbol == center_atom_symbol])
+        all_vertex_atom_indices = np.array([a.index for a in atoms if a.symbol == vertex_atom_symbol])
+        all_distances = atoms.get_all_distances(mic=True)
+        second_center_atom_indices = all_center_atom_indices
+
+        for center_atom_index in all_center_atom_indices:
+
+            # Remove the center atom index to avoid double counting
+            second_center_atom_indices = np.delete(second_center_atom_indices,
+                                                    np.argwhere(second_center_atom_indices == center_atom_index))
+
+            vertex_atom_indices = all_vertex_atom_indices[np.argsort(all_distances[center_atom_index][all_vertex_atom_indices])][:6]
+            #print('vertex_atom_indices', vertex_atom_indices)
+            # Choose four vertices closest to the center in the apical direction
+            equitorial_vertex_atom_indices = vertex_atom_indices[np.argsort([np.abs(atoms.get_distance(center_atom_index, vertex_index, vector=True, mic=True)[apical_axis]) for vertex_index in vertex_atom_indices])][:4]
+            #print('equitorial_vertex_atom_indices', equitorial_vertex_atom_indices)
+            for vertex_atom_index in equitorial_vertex_atom_indices:
+                if len(second_center_atom_indices):
+                    # Get nearest atom of type center_atom_symbol that is not center_atom_index
+                    #print('center_atom_index', center_atom_index)
+                    #print('all_center_atom_indices', all_center_atom_indices)
+                    #print('vertex_atom_index', vertex_atom_index)
+                    distance_sorted_center_atom_indices = all_center_atom_indices[np.argsort(all_distances[vertex_atom_index][all_center_atom_indices])]
+                    distance_sorted_center_atom_indices = np.delete(distance_sorted_center_atom_indices, np.argwhere(distance_sorted_center_atom_indices == center_atom_index))
+                    #print('distance_sorted_center_atom_indices', distance_sorted_center_atom_indices)
+                    nearest_center_atom_index = distance_sorted_center_atom_indices[0]
+                    if any(nearest_center_atom_index == second_center_atom_indices):
+                        angle_data = angle_data.append(pd.DataFrame(dict(step=step,
+                                                            angle=atoms.get_angle(center_atom_index,
+                                                                                  vertex_atom_index,
+                                                                                  nearest_center_atom_index, mic=True),
+                                                            atoms=','.join(map(str,[center_atom_index,
+                                                                            vertex_atom_index,
+                                                                            nearest_center_atom_index]))),
+                                                       index=[0]),
+                                          ignore_index=True)
+
+                distance_data = distance_data.append(pd.DataFrame(dict(step=step,
+                                                                       distance=all_distances[center_atom_index][vertex_atom_index],
+                                                                       atoms=','.join(map(str,[center_atom_index, vertex_atom_index]))),
+                                                                  index=[0]),
+                                                     ignore_index=True)
+
+
+
+
+    return angle_data, distance_data
+
+
 
 from ase.io.vasp import read_vasp_out
 
