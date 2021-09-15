@@ -205,8 +205,8 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
     :param trajectory: ASE trajectory
     :param plane_of_interest: way to specify equitorial plane (e.g. 'xy')
     :type plane_of_interest: str
-    :return: figure
-    :rtype: matplotlib.figure
+    :return: tuple of DataFrame (angles, distances)
+    :rtype: tuple
     '''
 
     if 'x' not in plane_of_interest:
