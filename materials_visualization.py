@@ -328,7 +328,7 @@ def load_bands(filename):
 from ase.dft.kpoints import bandpath
 import pickle
 
-def plot_bands(e_mk, path_file, energy_limits, bands_to_highlight, band_labels):
+def plot_bands(e_mk, path_file, energy_limits, bands_to_highlight=None, band_labels=None):
     '''
     Plot a band structure diagram from 2D array of E vs k
     :param e_mk: 2D array of eigenvalues vs k-points
@@ -344,6 +344,12 @@ def plot_bands(e_mk, path_file, energy_limits, bands_to_highlight, band_labels):
     :return: None
     :rtype: None
     '''
+
+    band_max = np.max(e_mk, axis=1)
+    if bands_to_highlight == None:
+        valence_band_index = np.max(np.argwhere(band_max < 0))
+        bands_to_highlight = [valence_band_index, valence_band_index + 1]
+        band_labels = ['Valence', 'Conduction']
 
     bands_to_highlight = make_list(bands_to_highlight)
     band_labels = make_list(band_labels)
