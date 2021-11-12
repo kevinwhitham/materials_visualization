@@ -328,7 +328,7 @@ def load_bands(filename):
 from ase.dft.kpoints import bandpath
 import pickle
 
-def plot_bands(e_mk, path_file, energy_limits, bands_to_highlight=None, band_labels=None):
+def plot_bands(e_mk, path_file, energy_limits, bands_to_highlight=None, band_labels=None, title=None):
     '''
     Plot a band structure diagram from 2D array of E vs k
     :param e_mk: 2D array of eigenvalues vs k-points
@@ -357,11 +357,6 @@ def plot_bands(e_mk, path_file, energy_limits, bands_to_highlight=None, band_lab
     min_plot_energy = min(energy_limits)
     max_plot_energy = max(energy_limits)
 
-    # x are the bandpath points in k-space
-    # X are the symmetry point locations in k-space
-    with open(path_file, 'rb') as file:
-        x, X, orig_labels = pickle.load(file)
-
     for b in bands_to_highlight:
         band_min = np.min(e_mk[b])
         band_max = np.max(e_mk[b])
@@ -375,6 +370,11 @@ def plot_bands(e_mk, path_file, energy_limits, bands_to_highlight=None, band_lab
             # Assume extra chars are part of a subscript, e.g. M1 becomes $M_{1}$
             label = '$' + label[0] + '_{' + str(label[1:]) + '}$'
         return label
+
+    # x are the bandpath points in k-space
+    # X are the symmetry point locations in k-space
+    with open(path_file, 'rb') as file:
+        x, X, orig_labels = pickle.load(file)
 
     labels = [pretty_label(l) for l in orig_labels]
 
@@ -415,6 +415,10 @@ def plot_bands(e_mk, path_file, energy_limits, bands_to_highlight=None, band_lab
     make_band_plot(e_mk, bands_to_highlight, x, X, labels, band_labels)
     if len(bands_to_highlight):
         plt.legend()
+
+    if title:
+        plt.title(title)
+    else:
         plt.title(f'Band {bands_to_highlight}')
 
     plt.tight_layout()
