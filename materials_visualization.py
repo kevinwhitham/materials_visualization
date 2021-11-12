@@ -304,3 +304,112 @@ def make_list(obj):
     if type(obj) is not list:
         obj = [obj]
     return obj
+
+def load_bands(filename):
+    '''
+    Load a 2D numpy array file of eigenvalues vs k-points.
+    :param filename: path to npy file
+    :type filename: basestring
+    :return: 2D numpy array
+    :rtype: array
+    '''
+
+    e_mk = np.load(filename)
+    emax_n = np.max(e_mk, axis=1) # greatest eigenvalue per band
+    soc_vb_n = max(np.argwhere(emax_n < 0))[0]  # Fermi level should be at zero energy
+
+    print('Bands:', e_mk.shape[0])
+    print('K-points:', e_mk.shape[1])
+    print('Valence band index: ',soc_vb_n)
+
+    return e_mk
+
+
+from ase.dft.kpoints import bandpath
+import pickle
+
+def plot_bands(e_mk, path_file, energy_limits, bands_to_highlight, band_labels):
+    '''
+    Plot a band structure diagram from 2D array of E vs k
+    :param e_mk: 2D array of eigenvalues vs k-points
+    :type e_mk: numpy array
+    :param energy_limits: list of min,max energies to plot
+    :type energy_limits: list
+    :param path_file: path of .pyc file with band path and k-points
+    :type path_file: basestring
+    :param bands_to_highlight: list of band indices e.g. [660, 662]
+    :type bands_to_highlight: list
+    :param band_labels: list of strings to show in legend e.g. ['Valence', 'Conduction']
+    :type band_labels: list
+    :return: None
+    :rtype: None
+    '''
+
+    bands_to_highlight = make_list(bands_to_highlight)
+    band_labels = make_list(band_labels)
+
+    min_plot_energy = min(energy_limits)
+    max_plot_energy = max(energy_limits)
+
+    # x are the bandpath points in k-space
+    # X are the symmetry point locations in k-space
+    with open(path_file, 'rb') as file:
+        x, X, orig_labels = pickle.load(file)
+
+    for b in bands_to_highlight:
+        band_min = np.min(e_mk[b])
+        band_max = np.max(e_mk[b])
+        print(
+            f'Width of band {b}: {np.round(band_max - band_min, 4)} ({np.round(band_min, 4)} to {np.round(band_max, 4)})')
+
+    def pretty_label(label):
+        if label == 'G':
+            label = r'$\Gamma$'
+        elif len(label) > 1:
+            # Assume extra chars are part of a subscript, e.g. M1 becomes $M_{1}$
+            label = '$' + label[0] + '_{' + str(label[1:]) + '}$'
+        return label
+
+    labels = [pretty_label(l) for l in orig_labels]
+
+    def make_band_plot(e_k, bands_of_interest, kpts, special_kpts, special_kpt_labels, labels=None):
+        plt.xticks(special_kpts, special_kpt_labels, size=10)
+        plt.yticks(size=10)
+
+        # Plot vertical grey lines at each symmetry point label
+        for i in range(len(special_kpts))[1:-1]:
+            plt.plot(2 * [special_kpts[i]], [min_plot_energy, max_plot_energy],
+                     c='0.5', linewidth=0.5)
+
+        # Plot the spin-orbit corrected bands in grey
+        band_max = np.max(e_k, axis=1)
+        band_min = np.min(e_k, axis=1)
+        for e in e_k[(band_max > min_plot_energy) & (band_min < max_plot_energy)]:
+            plt.plot(kpts, e, c='0.5', linewidth=0.5)
+
+        if labels == None:
+            labels = bands_of_interest
+
+        # Plot the bands of interest in colors
+        # Plot in descending order so that the legend shows higher energy bands at the top
+        bands_of_interest = np.array(bands_of_interest)
+        labels = np.array(labels)
+        band_order = list(np.argsort(bands_of_interest)[::-1])
+        for boi, label in zip(bands_of_interest[band_order], labels[band_order]):
+            plt.plot(kpts, e_k[boi], lw=1, label=label)
+
+        # Plot a horizontal dotted grey line at zero energy
+        plt.plot([0.0, kpts[-1]], 2 * [0.0], c='0.5', linestyle=':')
+        plt.ylabel(r'$\varepsilon_n(k)$ [eV]', size=10)
+        plt.axis([0, kpts[-1], min_plot_energy, max_plot_energy])
+
+
+    # Band structure diagrams
+    plt.figure(figsize=(4, 3), dpi=128)
+    make_band_plot(e_mk, bands_to_highlight, x, X, labels, band_labels)
+    if len(bands_to_highlight):
+        plt.legend()
+        plt.title(f'Band {bands_to_highlight}')
+
+    plt.tight_layout()
+    plt.show()
