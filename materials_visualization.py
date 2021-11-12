@@ -378,41 +378,39 @@ def plot_bands(e_mk, path_file, energy_limits, bands_to_highlight=None, band_lab
 
     labels = [pretty_label(l) for l in orig_labels]
 
-    def make_band_plot(e_k, bands_of_interest, kpts, special_kpts, special_kpt_labels, labels=None):
-        plt.xticks(special_kpts, special_kpt_labels, size=10)
-        plt.yticks(size=10)
-
-        # Plot vertical grey lines at each symmetry point label
-        for i in range(len(special_kpts))[1:-1]:
-            plt.plot(2 * [special_kpts[i]], [min_plot_energy, max_plot_energy],
-                     c='0.5', linewidth=0.5)
-
-        # Plot the spin-orbit corrected bands in grey
-        band_max = np.max(e_k, axis=1)
-        band_min = np.min(e_k, axis=1)
-        for e in e_k[(band_max > min_plot_energy) & (band_min < max_plot_energy)]:
-            plt.plot(kpts, e, c='0.5', linewidth=0.5)
-
-        if labels == None:
-            labels = bands_of_interest
-
-        # Plot the bands of interest in colors
-        # Plot in descending order so that the legend shows higher energy bands at the top
-        bands_of_interest = np.array(bands_of_interest)
-        labels = np.array(labels)
-        band_order = list(np.argsort(bands_of_interest)[::-1])
-        for boi, label in zip(bands_of_interest[band_order], labels[band_order]):
-            plt.plot(kpts, e_k[boi], lw=1, label=label)
-
-        # Plot a horizontal dotted grey line at zero energy
-        plt.plot([0.0, kpts[-1]], 2 * [0.0], c='0.5', linestyle=':')
-        plt.ylabel(r'$\varepsilon_n(k)$ [eV]', size=10)
-        plt.axis([0, kpts[-1], min_plot_energy, max_plot_energy])
-
-
     # Band structure diagrams
     plt.figure(figsize=(4, 3), dpi=128)
-    make_band_plot(e_mk, bands_to_highlight, x, X, labels, band_labels)
+
+    plt.xticks(X, labels, size=10)
+    plt.yticks(size=10)
+
+    # Plot vertical grey lines at each symmetry point label
+    for i in range(len(X))[1:-1]:
+        plt.plot(2 * [X[i]], [min_plot_energy, max_plot_energy],
+                 c='0.5', linewidth=0.5)
+
+    # Plot the spin-orbit corrected bands in grey
+    band_max = np.max(e_mk, axis=1)
+    band_min = np.min(e_mk, axis=1)
+    for e in e_mk[(band_max > min_plot_energy) & (band_min < max_plot_energy)]:
+        plt.plot(x, e, c='0.5', linewidth=0.5)
+
+    if band_labels == None:
+        band_labels = bands_to_highlight
+
+    # Plot the bands of interest in colors
+    # Plot in descending order so that the legend shows higher energy bands at the top
+    bands_of_interest = np.array(bands_to_highlight)
+    band_labels = np.array(band_labels)
+    band_order = list(np.argsort(bands_of_interest)[::-1])
+    for boi, label in zip(bands_of_interest[band_order], band_labels[band_order]):
+        plt.plot(x, e_mk[boi], lw=1, label=label)
+
+    # Plot a horizontal dotted grey line at zero energy
+    plt.plot([0.0, x[-1]], 2 * [0.0], c='0.5', linestyle=':')
+    plt.ylabel(r'$\varepsilon_n(k)$ [eV]', size=10)
+    plt.axis([0, x[-1], min_plot_energy, max_plot_energy])
+
     if len(bands_to_highlight):
         plt.legend()
 
