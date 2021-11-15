@@ -379,7 +379,8 @@ def plot_bands(e_mk, path_file, energy_limits, bands_to_highlight=None, band_lab
     labels = [pretty_label(l) for l in orig_labels]
 
     # Band structure diagrams
-    plt.figure(figsize=(4, 3), dpi=128)
+    if plt.gca() == None:
+        plt.figure(figsize=(4, 3), dpi=128)
 
     plt.xticks(X, labels, size=10)
     plt.yticks(size=10)
@@ -420,4 +421,3 @@ def plot_bands(e_mk, path_file, energy_limits, bands_to_highlight=None, band_lab
         plt.title(f'Band {bands_to_highlight}')
 
     plt.tight_layout()
-    plt.show()
