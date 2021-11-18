@@ -346,10 +346,13 @@ def plot_bands(e_mk, path_file, energy_limits, bands_to_highlight=None, band_lab
     '''
 
     band_max = np.max(e_mk, axis=1)
-    if bands_to_highlight == None:
+    if bands_to_highlight is None:
         valence_band_index = np.max(np.argwhere(band_max < 0))
         bands_to_highlight = [valence_band_index, valence_band_index + 1]
         band_labels = ['Valence', 'Conduction']
+
+    if band_labels is None:
+        band_labels = bands_to_highlight
 
     bands_to_highlight = make_list(bands_to_highlight)
     band_labels = make_list(band_labels)
