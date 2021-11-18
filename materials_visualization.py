@@ -396,9 +396,6 @@ def plot_bands(e_mk, path_file, energy_limits, bands_to_highlight=None, band_lab
     for e in e_mk[(band_max > min_plot_energy) & (band_min < max_plot_energy)]:
         plt.plot(x, e, c='0.5', linewidth=0.5)
 
-    if band_labels == None:
-        band_labels = bands_to_highlight
-
     # Plot the bands of interest in colors
     # Plot in descending order so that the legend shows higher energy bands at the top
     bands_of_interest = np.array(bands_to_highlight)
