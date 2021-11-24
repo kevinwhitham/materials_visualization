@@ -328,19 +328,23 @@ def load_bands(filename):
 from ase.dft.kpoints import bandpath
 import pickle
 
-def plot_bands(e_mk, path_file, energy_limits, bands_to_highlight=None, band_labels=None, title=None):
+def plot_bands(e_mk, path_data, energy_limits, bands_to_highlight=None, band_labels=None, title=None, weight_nk=None, weight_color=(1,0,0)):
     '''
     Plot a band structure diagram from 2D array of E vs k
     :param e_mk: 2D array of eigenvalues vs k-points
     :type e_mk: numpy array
     :param energy_limits: list of min,max energies to plot
     :type energy_limits: list
-    :param path_file: path of .pyc file with band path and k-points
-    :type path_file: basestring
+    :param path_data: band path and k-points tuple of (x, X, labels)
+    :type path_data: tuple
     :param bands_to_highlight: list of band indices e.g. [660, 662]
     :type bands_to_highlight: list
     :param band_labels: list of strings to show in legend e.g. ['Valence', 'Conduction']
     :type band_labels: list
+    :param weight_nk: array with same shape as e_mk giving a weight for each point
+    :type weight_nk: numpy array
+    :param weight_color: RGB value to color points of high weight
+    :type weight_color: tuple
     :return: None
     :rtype: None
     '''
@@ -374,15 +378,21 @@ def plot_bands(e_mk, path_file, energy_limits, bands_to_highlight=None, band_lab
             label = '$' + label[0] + '_{' + str(label[1:]) + '}$'
         return label
 
+    # Get band path
     # x are the bandpath points in k-space
     # X are the symmetry point locations in k-space
-    with open(path_file, 'rb') as file:
-        x, X, orig_labels = pickle.load(file)
+
+    # for backward compatability, check if path_data is a path to a pyc file
+    if type(path_data) is str:
+        with open(path_data, 'rb') as file:
+            x, X, orig_labels = pickle.load(file)
+    else:
+        x, X, orig_labels = path_data
 
     labels = [pretty_label(l) for l in orig_labels]
 
     # Band structure diagrams
-    if plt.gca() == None:
+    if plt.gca() is None:
         plt.figure(figsize=(4, 3), dpi=128)
 
     plt.xticks(X, labels, size=10)
@@ -394,10 +404,18 @@ def plot_bands(e_mk, path_file, energy_limits, bands_to_highlight=None, band_lab
                  c='0.5', linewidth=0.5)
 
     # Plot the spin-orbit corrected bands in grey
+    # If weights are given, use them to color the data
+    from matplotlib.colors import LinearSegmentedColormap
+    grey_red_cmap = LinearSegmentedColormap.from_list('weight_cmap', [(0.5,0.5,0.5),weight_color], N=256)
+
     band_max = np.max(e_mk, axis=1)
     band_min = np.min(e_mk, axis=1)
-    for e in e_mk[(band_max > min_plot_energy) & (band_min < max_plot_energy)]:
-        plt.plot(x, e, c='0.5', linewidth=0.5)
+    bands_to_plot = np.argwhere((band_max > min_plot_energy) & (band_min < max_plot_energy))
+    for band in bands_to_plot:
+        if weight_nk is None:
+            plt.plot(x, e_mk[band].flatten(), c='0.5', linewidth=0.5)
+        else:
+            plt.scatter(x, e_mk[band], c=weight_nk[band], cmap=grey_red_cmap, vmin=0, vmax=1, marker='.', s=20 * weight_nk[band], alpha=0.5)
 
     # Plot the bands of interest in colors
     # Plot in descending order so that the legend shows higher energy bands at the top
