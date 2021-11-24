@@ -439,3 +439,45 @@ def plot_bands(e_mk, path_data, energy_limits, bands_to_highlight=None, band_lab
         plt.title(f'Band {bands_to_highlight}')
 
     plt.tight_layout()
+
+
+from ase.io import read
+import matplotlib.pyplot as plt
+from os.path import splitext
+
+def plot_band_path(structure_file, band_path_str):
+    '''
+    Plot a path in the Brillouin zone as a png file and output a text file
+    with the special k-points.
+    :param structure_file: path to structure file readable by ASE
+    :type structure_file: str
+    :param path: special points, e.g. 'XGY'
+    :type path: str
+    :return: None
+    :rtype:
+    '''
+
+    atoms = read(structure_file)
+
+    basename, _ = splitext(structure_file)
+
+    lat = atoms.cell.get_bravais_lattice()
+
+    bp = atoms.cell.bandpath(band_path_str, 48)
+    reduced_bp = lat.bandpath(band_path_str, 48)
+
+    plt.figure(figsize=(8, 8), dpi=128)
+    bp.plot()
+    plt.savefig(f'{basename}_band_path.png')
+
+    with open(f'{basename}_band_path.log', 'w') as file:
+        file.write('Reduced Bravais Lattice:\n')
+        file.write(lat.description())
+        file.write(f'Path: {band_path_str}\n')
+        file.write('K-points for reduced bravais lattice:\n')
+        for p in list(band_path_str):
+            file.write(f'{p}: {reduced_bp.special_points[p]}\n')
+        file.write('K-points for structure as input:\n')
+        file.write(f'a={atoms.cell.cellpar()[0]:.4f}, b={atoms.cell.cellpar()[1]:.4f}, c={atoms.cell.cellpar()[2]:.4f}\n')
+        for p in list(band_path_str):
+            file.write(f'{p}: {bp.special_points[p]}\n')
