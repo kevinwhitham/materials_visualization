@@ -328,7 +328,13 @@ def load_bands(filename):
 from ase.dft.kpoints import bandpath
 import pickle
 
-def plot_bands(e_mk, path_data, energy_limits, bands_to_highlight=None, band_labels=None, title=None, weight_nk=None, weight_color=(1,0,0)):
+def plot_bands(e_mk, path_data,
+               energy_limits,
+               bands_to_highlight=None, band_labels=None,
+               title=None,
+               weight_nk=None,
+               weight_color=(1,0,0),
+               weight_label=None):
     '''
     Plot a band structure diagram from 2D array of E vs k
     :param e_mk: 2D array of eigenvalues vs k-points
@@ -406,7 +412,7 @@ def plot_bands(e_mk, path_data, energy_limits, bands_to_highlight=None, band_lab
     # Plot the spin-orbit corrected bands in grey
     # If weights are given, use them to color the data
     from matplotlib.colors import LinearSegmentedColormap
-    grey_red_cmap = LinearSegmentedColormap.from_list('weight_cmap', [(0.5,0.5,0.5),weight_color], N=256)
+    weight_cmap = LinearSegmentedColormap.from_list('weight_cmap', [(1,1,1),weight_color], N=256)
 
     band_max = np.max(e_mk, axis=1)
     band_min = np.min(e_mk, axis=1)
@@ -415,7 +421,11 @@ def plot_bands(e_mk, path_data, energy_limits, bands_to_highlight=None, band_lab
         if weight_nk is None:
             plt.plot(x, e_mk[band].flatten(), c='0.5', linewidth=0.5)
         else:
-            plt.scatter(x, e_mk[band], c=weight_nk[band], cmap=grey_red_cmap, vmin=0, vmax=1, marker='.', s=20 * weight_nk[band], alpha=0.5)
+            plt.scatter(x, e_mk[band], c=weight_nk[band], cmap=weight_cmap, vmin=0, vmax=1, marker='.', s=20 * weight_nk[band], alpha=0.5)
+
+    # for the legend
+    if weight_nk is not None:
+        plt.scatter(x[0], e_mk[0,0], color=weight_color, label=weight_label)
 
     # Plot the bands of interest in colors
     # Plot in descending order so that the legend shows higher energy bands at the top
