@@ -325,6 +325,58 @@ def load_bands(filename):
     return e_mk
 
 
+def get_band_orbital_weights(bs_calc, species, n, orbital, f_kmsi=None):
+    '''
+    Get the atomic orbital character for every k-point and band.
+
+    :param bs_calc: band structure calculator
+    :param species: string of atomic species e.g. 'Pb'
+    :param n: band index
+    :param orbital: string of orbital e.g. 's', 'p'
+    :param f_kmsi: for spin-orbit bands, provide the projections
+    :returns array (k-points x bands)
+    '''
+
+    if f_kmsi is not None:
+        f_kni = abs(f_kmsi[:, :, 0, :]) + abs(f_kmsi[:, :, 1, :])
+    else:
+        # projectors method works for LCAO calculations
+        f_kni = bs_calc.get_projections(locfun='projectors')
+
+    wfs = bs_calc.wfs
+
+    anl_ki = []
+
+    for kpt in wfs.kpt_u:
+        if kpt.s == 0:
+            anl_i = []
+            for a, P_ni in kpt.P_ani.items():
+                i = 0
+                setup = wfs.setups[a]
+                for lj, nj in zip(setup.l_j, setup.n_j):
+                    if nj >= 0:
+                        for j in range(i, i + 2 * lj + 1):
+                            anl_i.append([a, nj, lj])
+                    i += 2 * lj + 1
+
+            anl_ki.append(anl_i)
+    anl_ki = np.array(anl_ki)
+
+    letter_to_angular = dict(s=0, p=1, d=2, f=3)
+    l = letter_to_angular[orbital]
+
+    w_kn = np.zeros(f_kni.shape[:2])
+
+    for k in range(f_kni.shape[0]):
+        for a in [a.index for a in bs_calc.atoms if a.symbol == species]:
+            # get a weight from [0,1] for the contribution of a,n,l for all bands at this k point
+            anl_index = np.argwhere(np.all(anl_ki[k] == [a, n, l], axis=1)).flatten()
+            w_kn[k] += (np.sum((abs(f_kni[k, :, anl_index]) ** 2).T, axis=1) / np.sum(abs(f_kni[k]) ** 2,
+                                                                                      axis=1)).flatten()
+
+    return w_kn.T
+
+
 from ase.dft.kpoints import bandpath
 import pickle
 
