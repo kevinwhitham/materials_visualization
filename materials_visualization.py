@@ -421,7 +421,7 @@ def plot_bands(e_mk, path_data,
         if weight_nk is None:
             plt.plot(x, e_mk[band].flatten(), c='0.5', linewidth=0.5)
         else:
-            plt.scatter(x, e_mk[band], c=weight_nk[band], cmap=weight_cmap, vmin=0, vmax=1, marker='.', s=20 * weight_nk[band], alpha=0.5)
+            plt.scatter(x, e_mk[band], c=weight_nk[band], cmap=weight_cmap, vmin=0, vmax=1, marker='.', s=80 * weight_nk[band], alpha=0.5, edgecolors='none')
 
     # for the legend
     if weight_nk is not None:
