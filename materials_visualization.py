@@ -386,7 +386,8 @@ def plot_bands(e_mk, path_data,
                title=None,
                weight_nk=None,
                weight_color=(1,0,0),
-               weight_label=None):
+               weight_label=None,
+               thickness=None):
     '''
     Plot a band structure diagram from 2D array of E vs k
     :param e_mk: 2D array of eigenvalues vs k-points
@@ -403,6 +404,8 @@ def plot_bands(e_mk, path_data,
     :type weight_nk: numpy array
     :param weight_color: RGB value to color points of high weight
     :type weight_color: tuple
+    :param thickness: optional size of symbols
+    :type thickness: int
     :return: None
     :rtype: None
     '''
@@ -471,9 +474,22 @@ def plot_bands(e_mk, path_data,
     bands_to_plot = np.argwhere((band_max > min_plot_energy) & (band_min < max_plot_energy))
     for band in bands_to_plot:
         if weight_nk is None:
-            plt.plot(x, e_mk[band].flatten(), c='0.5', linewidth=0.5)
+            if thickness is None:
+                thickness = 0.5
+
+            plt.plot(x, e_mk[band].flatten(), c='0.5', linewidth=thickness)
+
         else:
-            plt.scatter(x, e_mk[band], c=weight_nk[band], cmap=weight_cmap, vmin=0, vmax=1, marker='.', s=80 * weight_nk[band], alpha=0.5, edgecolors='none')
+            if thickness is None:
+                thickness = 200
+
+            # Vary color and thickness by weight
+            # plt.scatter(x, e_mk[band], c=weight_nk[band], cmap=weight_cmap, vmin=0, vmax=1, marker='.',
+            #             s=thickness * weight_nk[band], alpha=0.5, edgecolors='none')
+
+            # Vary just thickness by weight
+            plt.scatter(x, e_mk[band], color=weight_color, marker='.',
+                        s=thickness * weight_nk[band], alpha=0.5, edgecolors='none')
 
     # for the legend
     if weight_nk is not None:
