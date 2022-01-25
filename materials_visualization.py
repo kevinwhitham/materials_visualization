@@ -179,7 +179,9 @@ def plot_unit_cell_volume_change(trajectories, labels):
     trajectories = make_list(trajectories)
     labels = make_list(labels)
 
-    fig = plt.figure()
+    fig = plt.gcf()
+    if fig is None:
+        fig = plt.figure()
 
     for traj, label in zip(trajectories, labels):
         if type(traj) == str:
