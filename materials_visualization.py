@@ -430,7 +430,7 @@ def load_bands(filename):
     return e_mk
 
 
-def get_band_orbital_weights(bs_calc, species, n, orbital, f_kmsi=None):
+def get_band_orbital_weights(bs_calc, species, n, orbital, M=None, atoms=None, f_kmsi=None):
     '''
     Get the atomic orbital character for every k-point and band.
 
@@ -470,14 +470,21 @@ def get_band_orbital_weights(bs_calc, species, n, orbital, f_kmsi=None):
     letter_to_angular = dict(s=0, p=1, d=2, f=3)
     l = letter_to_angular[orbital]
 
+    if M is None:
+        M = np.arange(-l, l + 1)
+
+    if atoms is None:
+        atoms = [a.index for a in bs_calc.atoms if a.symbol == species]
+
     w_kn = np.zeros(f_kni.shape[:2])
 
     for k in range(f_kni.shape[0]):
-        for a in [a.index for a in bs_calc.atoms if a.symbol == species]:
-            # get a weight from [0,1] for the contribution of a,n,l for all bands at this k point
+        for a in atoms:
+            # get a weight from [0,1] for the contribution of a,n,l,m for all bands at this k point
             anl_index = np.argwhere(np.all(anl_ki[k] == [a, n, l], axis=1)).flatten()
-            w_kn[k] += (np.sum((abs(f_kni[k, :, anl_index]) ** 2).T, axis=1) / np.sum(abs(f_kni[k]) ** 2,
-                                                                                      axis=1)).flatten()
+            for im in np.argwhere(np.array(M) == np.arange(-l, l + 1)):
+                w_kn[k] += (np.sum((abs(f_kni[k, :, anl_index[im]]) ** 2).T, axis=1) / np.sum(abs(f_kni[k]) ** 2,
+                                                                                              axis=1)).flatten()
 
     return w_kn.T
 
