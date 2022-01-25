@@ -1,6 +1,16 @@
 import nglview
+from os.path import splitext
+import pickle
+from ase.io.vasp import read_vasp_out
+import pandas as pd
+import matplotlib.pyplot as plt
+from datetime import timedelta
+from ase.io import read
+from ase.io import Trajectory
 import math
 from ipywidgets import HBox, VBox, Label
+import numpy as np
+import ase.units
 
 
 def show_ngl_row(mols, show_indices=False, captions=None, trajectories=False, view_axis='y', show_cell=True):
@@ -49,10 +59,6 @@ def show_ngl_row(mols, show_indices=False, captions=None, trajectories=False, vi
 
     return result
 
-
-import pandas as pd
-import matplotlib.pyplot as plt
-from datetime import timedelta
 
 
 def plot_fmax_vs_time(timing_filenames, labels=None):
@@ -140,11 +146,6 @@ def plot_fmax_vs_time(timing_filenames, labels=None):
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
     return fig
-
-
-from ase.io import read
-from ase.io import Trajectory
-import numpy as np
 
 
 def plot_total_displacement(trajectory_filenames, labels):
@@ -273,9 +274,6 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
 
 
 
-from ase.io.vasp import read_vasp_out
-
-
 def vasp_to_trajectory(outcar_filenames, trajectory_filename):
     '''
     Convert and concatenate VASP OUTCAR files to ASE Trajectory
@@ -377,8 +375,6 @@ def get_band_orbital_weights(bs_calc, species, n, orbital, f_kmsi=None):
     return w_kn.T
 
 
-from ase.dft.kpoints import bandpath
-import pickle
 
 def plot_bands(e_mk, path_data,
                energy_limits,
@@ -519,9 +515,6 @@ def plot_bands(e_mk, path_data,
     plt.tight_layout()
 
 
-from ase.io import read
-import matplotlib.pyplot as plt
-from os.path import splitext
 
 def plot_band_path(structure_file, band_path_str):
     '''
