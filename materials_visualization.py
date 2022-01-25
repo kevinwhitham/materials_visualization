@@ -299,6 +299,112 @@ def vasp_to_trajectory(outcar_filenames, trajectory_filename):
     return Trajectory(trajectory_filename)
 
 
+def plot_relaxation(traj, label, fmax_target=0.01):
+    '''
+    Plot progress of a relaxation (pressure, fmax, energy, volume)
+    :param traj: the steps of the relaxation
+    :type traj: ASE trajectory
+    :param label: name for this relaxation
+    :type label: str
+    :param fmax_target: attempt to estimate at which step fmax will be achieved
+    :type fmax_target: float
+    :return: None
+    :rtype:
+    '''
+
+    fig = plt.gcf()
+    if fig is None:
+        fig, ax = plt.subplots(4, 1)
+
+    ax = plt.subplot(411)
+    # Sign convention is opposite for VASP (<0 is tension) vs ASE (<0 is compression)
+    # Default pressure units in ASE are eV/Angstrom^3
+    pressure_kbar = [np.trace(atoms.get_stress(voigt=False)) / 3 / ase.units.GPa * -10 for atoms in traj]
+    print(f'Final pressure: {pressure_kbar[-1]:.4f} kBar')
+    ax.plot(list(range(len(traj))), pressure_kbar, 'o-', label=label)
+    plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
+    plt.xlabel('Step')
+    plt.ylabel('Pressure (kBar)')
+
+    # We can estimate the accuracy of the pressure by comparing repeated calculations on the same structure
+    # with PREC = Normal, (EDIFF = 1E-4) the accuracy of the pressure is approximately 0.1 kBar
+
+    plt.subplot(4,1,2, sharex=ax)
+    max_forces = [np.max(np.linalg.norm(atoms.get_forces(), axis=1)) for atoms in traj]
+    print(f'Minimum fmax:\t{min(max_forces):.4e} eV/Ang.')
+    print(f'Final fmax:\t{max_forces[-1]:.4e} ev/Ang.')
+    plt.plot(list(range(len(traj))), max_forces, 'o-', label=label)
+    plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
+
+    # Predict how many steps until fmax < threshold
+    if len(max_forces) > 4:
+        fmax_fit_start = len(max_forces) - len(max_forces)//4
+        fmax_fit_end = len(max_forces)
+        m, b = \
+        np.linalg.lstsq(np.vstack([np.arange(fmax_fit_start, fmax_fit_end), np.ones(fmax_fit_end - fmax_fit_start)]).T,
+                        np.log(max_forces[fmax_fit_start:fmax_fit_end]), rcond=None)[0]
+        print(f'fmax will be < {fmax_target} at step {np.ceil((np.log(fmax_target) - b) / m)}')
+        plt.plot(np.arange(fmax_fit_start, fmax_fit_end), np.exp(m * np.arange(fmax_fit_start, fmax_fit_end) + b), '-',
+                 color='red')
+
+    plt.xlabel('Step')
+    plt.yscale('log')
+    plt.ylabel('fmax (eV/$\AA$)')
+
+    plt.subplot(4,1,3, sharex=ax)
+    plt.plot(list(range(len(traj))), [a.get_potential_energy() for a in traj], label=label)
+    plt.xlabel('Step')
+    plt.ylabel('Energy (eV)')
+    plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
+
+    plt.subplot(4,1,4, sharex=ax)
+    plot_unit_cell_volume_change(traj, labels=[label])
+
+def plot_trajectory_angles_and_distances(traj, atom1, atom2, label):
+    '''
+    Plot angles and distances between two atom types.
+
+    :param traj: sequence of structures
+    :type traj: ASE trajectory
+    :param atom1: symbol of the first atom
+    :type atom1: str
+    :param atom2: symbol of the second atom
+    :type atom2: str
+    :param label: label for plots
+    :type label: str
+    :return: None
+    :rtype:
+    '''
+
+    # Plot Pb-I-Pb angles and distances
+    angle_data, distance_data = get_octahedral_angles_and_distances(atom1, atom2, traj)
+
+    fig = plt.gcf()
+    if fig is None:
+        fig, axes = plt.subplots(2,1)
+
+    ax = plt.subplot(2,1,1)
+    angle_data.pivot(index='step', columns='atoms', values='angle').plot(ax=ax)
+    plt.title(label)
+    plt.legend(title='Angle No.', loc='center left', bbox_to_anchor=(1, 0.5))
+    plt.xlabel('Step')
+    plt.ylabel(f'{atom1}-{atom2}-{atom1} Angle (deg)')
+    print(f'Final {atom1}-{atom2}-{atom1} Angle', angle_data.query(f'step=={angle_data["step"].max()}')['angle'].mean(),
+          '+/-',
+          angle_data.query(f'step=={angle_data["step"].max()}')['angle'].std())
+
+    ax = plt.subplot(2,1,2, sharex=ax)
+    distance_data.pivot(index='step', columns='atoms', values='distance').plot(ax=ax)
+    plt.title(label)
+    plt.legend(title='Bond No.', loc='center left', bbox_to_anchor=(1, 0.5))
+    plt.xlabel('Step')
+    plt.ylabel(f'{atom1}-{atom2} Distance ($\AA$)')
+
+    print(f'Final {atom1}-{atom2} distance',
+          distance_data.query(f'step=={distance_data["step"].max()}')['distance'].mean(), '+/-',
+          distance_data.query(f'step=={distance_data["step"].max()}')['distance'].std())
+
+
 def make_list(obj):
     if type(obj) is not list:
         obj = [obj]
