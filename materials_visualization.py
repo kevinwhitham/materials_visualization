@@ -291,7 +291,6 @@ def vasp_to_trajectory(outcar_filenames, trajectory_filename):
 
     atoms_list = []
     for f in outcar_filenames:
-        before_len = len(atoms_list)
         atoms_list += read_vasp_out(f, index=':')
 
     traj = Trajectory(trajectory_filename, mode='w')
