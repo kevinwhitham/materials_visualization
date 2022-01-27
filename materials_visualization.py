@@ -1,3 +1,5 @@
+import glob
+import re
 import nglview
 from os.path import splitext
 import pickle
@@ -299,7 +301,7 @@ def vasp_to_trajectory(outcar_filenames, trajectory_filename):
     return Trajectory(trajectory_filename)
 
 
-def plot_relaxation(traj, label, fmax_target=0.01):
+def plot_relaxation(traj, label, fmax_target=0.01, incar_files=None):
     '''
     Plot progress of a relaxation (pressure, fmax, energy, volume)
     :param traj: the steps of the relaxation
@@ -308,15 +310,22 @@ def plot_relaxation(traj, label, fmax_target=0.01):
     :type label: str
     :param fmax_target: attempt to estimate at which step fmax will be achieved
     :type fmax_target: float
+    :param incar_files: If this is a VASP calculation, you may plot SMASS and POTIM
+    :type incar_files: list of str
     :return: None
     :rtype:
     '''
 
+    cols = 1
+    rows = 4
+    if incar_files:
+        rows = 5
+
     fig = plt.gcf()
     if fig is None:
-        fig, ax = plt.subplots(4, 1)
+        fig, ax = plt.subplots(rows, cols)
 
-    ax = plt.subplot(411)
+    ax = plt.subplot(rows, cols, 1)
     # Sign convention is opposite for VASP (<0 is tension) vs ASE (<0 is compression)
     # Default pressure units in ASE are eV/Angstrom^3
     pressure_kbar = [np.trace(atoms.get_stress(voigt=False)) / 3 / ase.units.GPa * -10 for atoms in traj]
@@ -329,7 +338,7 @@ def plot_relaxation(traj, label, fmax_target=0.01):
     # We can estimate the accuracy of the pressure by comparing repeated calculations on the same structure
     # with PREC = Normal, (EDIFF = 1E-4) the accuracy of the pressure is approximately 0.1 kBar
 
-    plt.subplot(4,1,2, sharex=ax)
+    plt.subplot(rows, cols, 2, sharex=ax)
     max_forces = [np.max(np.linalg.norm(atoms.get_forces(), axis=1)) for atoms in traj]
     print(f'Minimum fmax:\t{min(max_forces):.4e} eV/Ang.')
     print(f'Final fmax:\t{max_forces[-1]:.4e} ev/Ang.')
@@ -351,14 +360,50 @@ def plot_relaxation(traj, label, fmax_target=0.01):
     plt.yscale('log')
     plt.ylabel('fmax (eV/$\AA$)')
 
-    plt.subplot(4,1,3, sharex=ax)
+    plt.subplot(rows, cols, 3, sharex=ax)
     plt.plot(list(range(len(traj))), [a.get_potential_energy() for a in traj], label=label)
     plt.xlabel('Step')
     plt.ylabel('Energy (eV)')
     plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
 
-    plt.subplot(4,1,4, sharex=ax)
+    plt.subplot(rows, cols, 4, sharex=ax)
     plot_unit_cell_volume_change(traj, labels=[label])
+
+    if incar_files:
+        plt.subplot(rows, cols, 5, sharex=ax)
+        # Get SMASS and POTIM values
+        potim = []
+        smass = []
+        for file_name in incar_files:
+            # Get number of steps in this run
+            outcar_file_name = re.sub('INCAR', 'OUTCAR', file_name)
+            total_time = 0
+            steps = 0
+            with open(outcar_file_name) as outcar_file:
+                search_result = re.findall(r'LOOP\+:\s+cpu time\s+(\d+)\.', outcar_file.read())
+
+            if search_result:
+                for loop_time in search_result:
+                    total_time += int(loop_time)
+                    steps += 1
+
+            with open(file_name) as incar_file:
+                txt = incar_file.read()
+                potim_value = float(re.search(r'POTIM\s+=\s+(\d*\.?\d*)', txt).group(1))
+                smass_value = float(re.search(r'SMASS\s+=\s+(\d*\.?\d*)', txt).group(1))
+                for step in range(steps):
+                    potim.append(potim_value)
+                    smass.append(smass_value)
+
+        plt.plot(list(range(len(potim))), potim, 'rx-', label='POTIM')
+        plt.ylabel('POTIM', color='r')
+        plt.yticks(color='r')
+        plt.gca().twinx()
+        plt.plot(list(range(len(smass))), smass, 'bo-', label='SMASS')
+        plt.ylabel('SMASS', color='b')
+        plt.yticks(color='b')
+        plt.xlabel('Step')
+
 
 def plot_trajectory_angles_and_distances(traj, atom1, atom2, label):
     '''
