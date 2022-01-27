@@ -411,9 +411,9 @@ def plot_trajectory_angles_and_distances(traj, atom1, atom2, label):
 
     :param traj: sequence of structures
     :type traj: ASE trajectory
-    :param atom1: symbol of the first atom
+    :param atom1: symbol of the center atom
     :type atom1: str
-    :param atom2: symbol of the second atom
+    :param atom2: symbol of the vertex atom
     :type atom2: str
     :param label: label for plots
     :type label: str
