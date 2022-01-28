@@ -226,7 +226,11 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
     distance_data = pd.DataFrame()
 
     # Step through the trajectory
-    for step,atoms in enumerate(trajectory):
+    for step, atoms in enumerate(trajectory):
+
+        # Structure must be periodic to find all angles and distances
+        atoms.set_pbc(True)
+
         # For each center atom, find the nearest 6 atoms of vertex type
         all_center_atom_indices = np.array([a.index for a in atoms if a.symbol == center_atom_symbol])
         all_vertex_atom_indices = np.array([a.index for a in atoms if a.symbol == vertex_atom_symbol])
