@@ -453,6 +453,144 @@ def plot_trajectory_angles_and_distances(traj, atom1, atom2, label):
           distance_data.query(f'step=={distance_data["step"].max()}')['distance'].std())
 
 
+def plot_vasp_relaxations(exclude_keyword=None):
+    '''
+    Finds all INCAR, OUTCAR files in all sub directories and plots relaxations.
+    :param exclude_keyword: exclude paths that include this string
+    :type exclude_keyword: str
+    :return: volume change, fmax, functional, Pb-I-Pb angle, unit cell vector lengths
+    :rtype: DataFrame
+    '''
+    import glob
+    import os.path
+    import materials_visualization as mv
+    import pandas as pd
+    from ase.io import Trajectory
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    plt.rcdefaults()
+
+    # get directories, assume all directories correspond to a relaxation
+    dirs = glob.glob('**/', recursive=True)
+
+    data = []
+    labels = []
+    relaxation_summary = pd.DataFrame()
+    for i, path in enumerate(dirs):
+
+        # Exclude some data sets
+        if (exclude_keyword is None) or (exclude_keyword not in path):
+            # Get a list of OUTCAR files
+            files = glob.glob(path + 'OUTCAR*')
+
+            if len(files):
+                files.sort(key=lambda x: int(re.search(r'(\d+)',x).group(1)))
+                data.append(files)
+                labels.append(path)
+
+    print('Plotting data from:', labels)
+    print('OUTCAR files:', data)
+
+    for i, files in enumerate(data):
+        plt.figure(dpi=128, figsize=(6, 6))
+        path = labels[i]
+
+        print(path)
+
+        incar_files = glob.glob(path + 'INCAR*')
+        incar_files.sort()
+        with open(incar_files[-1]) as file:
+            incar = file.read()
+            print(incar)
+
+        # Concatenate sorted OUTCAR files into one trajectory
+        traj = mv.vasp_to_trajectory(files, path + 'vasp_relaxation.traj')
+
+        angle_data, distance_data = mv.get_octahedral_angles_and_distances('Pb', 'I', traj[-1:])
+        pb_i_pb_angle = np.mean(angle_data['angle'])
+        relaxation_summary = relaxation_summary.append(pd.DataFrame(
+            dict(delta_volume_pct=(traj[-1].cell.volume - traj[0].cell.volume) / traj[0].cell.volume * 100.0,
+                 fmax_final=np.max(np.linalg.norm(traj[-1].get_forces(), axis=1)),
+                 functional=path[:-1],
+                 pb_i_pb_angle=pb_i_pb_angle,
+                 a_vector_delta_pct=(traj[-1].cell.cellpar()[0] - traj[0].cell.cellpar()[0]) / traj[0].cell.cellpar()[
+                     0] * 100.0,
+                 b_vector_delta_pct=(traj[-1].cell.cellpar()[1] - traj[0].cell.cellpar()[1]) / traj[0].cell.cellpar()[
+                     1] * 100.0,
+                 c_vector_delta_pct=(traj[-1].cell.cellpar()[2] - traj[0].cell.cellpar()[2]) / traj[0].cell.cellpar()[
+                     2] * 100.0,
+                 ),
+            index=[i]
+            )
+                                                       )
+
+        mv.plot_relaxation(traj, path, incar_files=incar_files)
+
+        # ASE's OUTCAR file parser does not set periodic boundaries = True
+        # So do it here before analysing the structure
+        # atoms_list = []
+        # for i,atoms in enumerate(traj):
+        #    atoms.set_pbc(True)
+        #    atoms_list.append(atoms)
+
+        # traj = Trajectory(path+'vasp_structures.traj', mode='w')
+        # for atoms in atoms_list:
+        #    traj.write(atoms)
+
+        # traj = Trajectory(path+'vasp_structures.traj')
+
+        plt.figure(dpi=128, figsize=(6, 6))
+        mv.plot_trajectory_angles_and_distances(traj, 'Pb', 'I', path)
+
+    return relaxation_summary
+
+def compare_relaxations(relaxation_summary):
+    '''
+    Bar plot comparison of change in volume after relaxation by different functionals.
+    :param relaxation_summary: contains delta_volume_pct, functional
+    :type relaxation_summary: DataFrame
+    :return:
+    :rtype:
+    '''
+    plt.style.reload_library()
+    plt.rcdefaults()
+    plt.style.use(['acs'])
+
+    plt.subplots(1, 2, dpi=300, figsize=(3.25, 3.25 / 2))
+    plt.subplot(1, 2, 2)
+    plt.gca().grid(axis='y', linewidth=0.5)
+    plt.gca().set_axisbelow(True)
+    for i in relaxation_summary.index:
+        plt.bar(x=i, height=relaxation_summary.iloc[i]['delta_volume_pct'],
+                label=relaxation_summary.iloc[i]['functional'])
+    plt.axhline(y=0, color='grey', linewidth=0.5)
+    plt.ylabel('$V_0$ Relative Error (%)')
+    plt.xlabel(None)
+    plt.xticks([])
+
+    # Plot absolute error
+    plt.subplot(1, 2, 1)
+    plt.gca().grid(axis='y', linewidth=0.5)
+    plt.gca().set_axisbelow(True)
+    for i in relaxation_summary.index:
+        plt.bar(x=i, height=abs(relaxation_summary.iloc[i]['delta_volume_pct']),
+                label=relaxation_summary.iloc[i]['functional'])
+    plt.axhline(y=0, color='grey', linewidth=0.5)
+    plt.ylabel('$V_0$ Absolute Error (%)')
+    plt.xlabel(None)
+    plt.xticks([])
+    plt.legend(loc='best', fontsize=4, edgecolor='w', borderpad=0)
+
+    # Add panel labels
+    for i, label in enumerate(('a', 'b')):
+        ax = plt.subplot(1, 2, i + 1)
+        ax.text(-0.1, 1.15, label, transform=ax.transAxes,
+                fontsize=6, fontweight='bold', va='top', ha='right')
+
+    plt.tight_layout()
+    plt.subplots_adjust(left=0)
+
 def make_list(obj):
     if type(obj) is not list:
         obj = [obj]
