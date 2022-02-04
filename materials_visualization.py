@@ -485,26 +485,26 @@ def plot_vasp_relaxations(exclude_keyword=None):
     dirs = glob.glob('**/', recursive=True)
 
     data = []
-    labels = []
+    paths = []
     relaxation_summary = pd.DataFrame()
     for i, path in enumerate(dirs):
 
         # Exclude some data sets
         if (exclude_keyword is None) or (exclude_keyword not in path):
             # Get a list of OUTCAR files
-            files = glob.glob(path + 'OUTCAR*')
+            files = glob.glob(path + 'OUTCAR_*')
 
             if len(files):
-                files.sort(key=lambda x: int(re.search(r'(\d+)',x).group(1)))
+                files.sort(key=lambda x: int(re.search(r'OUTCAR_(\d+)',x).group(1)))
                 data.append(files)
-                labels.append(path)
+                paths.append(path)
 
-    print('Plotting data from:', labels)
-    print('OUTCAR files:', data)
+    print('Plotting data from:', paths)
+    print('OUTCAR files', data)
 
     for i, files in enumerate(data):
-        plt.figure(dpi=128, figsize=(6, 6))
-        path = labels[i]
+        path = paths[i]
+        label = path[:-1]  # remove trailing /
 
         print(path)
 
@@ -522,7 +522,7 @@ def plot_vasp_relaxations(exclude_keyword=None):
         relaxation_summary = relaxation_summary.append(pd.DataFrame(
             dict(delta_volume_pct=(traj[-1].cell.volume - traj[0].cell.volume) / traj[0].cell.volume * 100.0,
                  fmax_final=np.max(np.linalg.norm(traj[-1].get_forces(), axis=1)),
-                 functional=path[:-1],
+                 functional=label,
                  pb_i_pb_angle=pb_i_pb_angle,
                  a_vector_delta_pct=(traj[-1].cell.cellpar()[0] - traj[0].cell.cellpar()[0]) / traj[0].cell.cellpar()[
                      0] * 100.0,
@@ -534,24 +534,15 @@ def plot_vasp_relaxations(exclude_keyword=None):
             index=[i]
             )
                                                        )
+        plt.figure(dpi=128, figsize=(6,6))
+        mv.plot_relaxation(traj, label=label, incar_files=incar_files)
 
-        mv.plot_relaxation(traj, path, incar_files=incar_files)
-
-        # ASE's OUTCAR file parser does not set periodic boundaries = True
-        # So do it here before analysing the structure
-        # atoms_list = []
-        # for i,atoms in enumerate(traj):
-        #    atoms.set_pbc(True)
-        #    atoms_list.append(atoms)
-
-        # traj = Trajectory(path+'vasp_structures.traj', mode='w')
-        # for atoms in atoms_list:
-        #    traj.write(atoms)
-
-        # traj = Trajectory(path+'vasp_structures.traj')
+        # Show now so that it shows below printed info
+        plt.show()
 
         plt.figure(dpi=128, figsize=(6, 6))
-        mv.plot_trajectory_angles_and_distances(traj, 'Pb', 'I', path)
+        mv.plot_trajectory_angles_and_distances(traj, 'Pb', 'I', label)
+        plt.show()
 
     return relaxation_summary
 
