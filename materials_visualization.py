@@ -326,54 +326,10 @@ def plot_relaxation(traj, label, fmax_target=0.01, incar_files=None):
 
     fig = plt.gcf()
     if fig is None:
-        fig, ax = plt.subplots(rows, cols)
-
-    ax = plt.subplot(rows, cols, 1)
-    # Sign convention is opposite for VASP (<0 is tension) vs ASE (<0 is compression)
-    # Default pressure units in ASE are eV/Angstrom^3
-    pressure_kbar = [np.trace(atoms.get_stress(voigt=False)) / 3 / ase.units.GPa * -10 for atoms in traj]
-    print(f'Final pressure: {pressure_kbar[-1]:.4f} kBar')
-    ax.plot(list(range(len(traj))), pressure_kbar, 'o-', label=label)
-    plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
-    plt.xlabel('Step')
-    plt.ylabel('Pressure (kBar)')
-
-    # We can estimate the accuracy of the pressure by comparing repeated calculations on the same structure
-    # with PREC = Normal, (EDIFF = 1E-4) the accuracy of the pressure is approximately 0.1 kBar
-
-    plt.subplot(rows, cols, 2, sharex=ax)
-    max_forces = [np.max(np.linalg.norm(atoms.get_forces(), axis=1)) for atoms in traj]
-    print(f'Minimum fmax:\t{min(max_forces):.4e} eV/Ang.')
-    print(f'Final fmax:\t{max_forces[-1]:.4e} ev/Ang.')
-    plt.plot(list(range(len(traj))), max_forces, 'o-', label=label)
-    plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
-
-    # Predict how many steps until fmax < threshold
-    if len(max_forces) > 4:
-        fmax_fit_start = len(max_forces) - len(max_forces)//4
-        fmax_fit_end = len(max_forces)
-        m, b = \
-        np.linalg.lstsq(np.vstack([np.arange(fmax_fit_start, fmax_fit_end), np.ones(fmax_fit_end - fmax_fit_start)]).T,
-                        np.log(max_forces[fmax_fit_start:fmax_fit_end]), rcond=None)[0]
-        print(f'fmax will be < {fmax_target} at step {np.ceil((np.log(fmax_target) - b) / m)}')
-        plt.plot(np.arange(fmax_fit_start, fmax_fit_end), np.exp(m * np.arange(fmax_fit_start, fmax_fit_end) + b), '-',
-                 color='red')
-
-    plt.xlabel('Step')
-    plt.yscale('log')
-    plt.ylabel('fmax (eV/$\AA$)')
-
-    plt.subplot(rows, cols, 3, sharex=ax)
-    plt.plot(list(range(len(traj))), [a.get_potential_energy() for a in traj], label=label)
-    plt.xlabel('Step')
-    plt.ylabel('Energy (eV)')
-    plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
-
-    plt.subplot(rows, cols, 4, sharex=ax)
-    plot_unit_cell_volume_change(traj, labels=[label])
+        plt.subplots(rows, cols, figsize=(3.25, rows*3.25))
 
     if incar_files:
-        plt.subplot(rows, cols, 5, sharex=ax)
+        ax = plt.subplot(rows, cols, 5)
         # Get SMASS and POTIM values
         potim = []
         smass = []
@@ -405,7 +361,60 @@ def plot_relaxation(traj, label, fmax_target=0.01, incar_files=None):
         plt.plot(list(range(len(smass))), smass, 'bo-', label='SMASS')
         plt.ylabel('SMASS', color='b')
         plt.yticks(color='b')
+
+        plt.subplot(rows, cols, 4, sharex=ax)
+        plot_unit_cell_volume_change(traj, labels=[label])
+        plt.tick_params('x', labelbottom=False, bottom=False)
+        plt.xlabel('')
+
+        plt.sca(ax)
         plt.xlabel('Step')
+    else:
+        ax = plt.subplot(rows, cols, 4)
+        plt.subplot(rows, cols, 4)
+        plot_unit_cell_volume_change(traj, labels=[label])
+
+    plt.sca(plt.subplot(rows, cols, 1, sharex=ax))
+    # Sign convention is opposite for VASP (<0 is tension) vs ASE (<0 is compression)
+    # Default pressure units in ASE are eV/Angstrom^3
+    pressure_kbar = [np.trace(atoms.get_stress(voigt=False)) / 3 / ase.units.GPa * -10 for atoms in traj]
+    print(f'Final pressure: {pressure_kbar[-1]:.4f} kBar')
+    plt.plot(list(range(len(traj))), pressure_kbar, 'o-', label=label)
+    plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
+    plt.ylabel('Pressure (kBar)')
+    plt.tick_params('x', labelbottom=False, bottom=False)
+
+    # We can estimate the accuracy of the pressure by comparing repeated calculations on the same structure
+    # with PREC = Normal, (EDIFF = 1E-4) the accuracy of the pressure is approximately 0.1 kBar
+
+    plt.subplot(rows, cols, 2, sharex=ax)
+    max_forces = [np.max(np.linalg.norm(atoms.get_forces(), axis=1)) for atoms in traj]
+    print(f'Minimum fmax:\t{min(max_forces):.4e} eV/Ang.')
+    print(f'Final fmax:\t{max_forces[-1]:.4e} ev/Ang.')
+    plt.plot(list(range(len(traj))), max_forces, 'o-', label=label)
+    plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
+
+    # Predict how many steps until fmax < threshold
+    if len(max_forces) > 4:
+        fmax_fit_start = len(max_forces) - len(max_forces)//4
+        fmax_fit_end = len(max_forces)
+        m, b = \
+        np.linalg.lstsq(np.vstack([np.arange(fmax_fit_start, fmax_fit_end), np.ones(fmax_fit_end - fmax_fit_start)]).T,
+                        np.log(max_forces[fmax_fit_start:fmax_fit_end]), rcond=None)[0]
+        print(f'fmax will be < {fmax_target} at step {np.ceil((np.log(fmax_target) - b) / m)}')
+        plt.plot(np.arange(fmax_fit_start, fmax_fit_end), np.exp(m * np.arange(fmax_fit_start, fmax_fit_end) + b), '-',
+                 color='red')
+
+    plt.yscale('log')
+    plt.ylabel('fmax (eV/$\AA$)')
+    plt.tick_params('x', labelbottom=False, bottom=False)
+
+    plt.subplot(rows, cols, 3, sharex=ax)
+    plt.plot(list(range(len(traj))), [a.get_potential_energy() for a in traj], label=label)
+    plt.ylabel('Energy (eV)')
+    plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
+    plt.tick_params('x', labelbottom=False, bottom=False)
+
 
 
 def plot_trajectory_angles_and_distances(traj, atom1, atom2, label):
