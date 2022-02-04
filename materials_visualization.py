@@ -593,6 +593,50 @@ def compare_relaxations(relaxation_summary):
     plt.tight_layout()
     plt.subplots_adjust(left=0)
 
+def get_vasp_runtimes(exclude_keyword=None):
+    '''
+
+    :param exclude_keyword: exclude data in paths with this string
+    :type exclude_keyword: str
+    :return: run time data
+    :rtype: DataFrame
+    '''
+    # get directories, assume all directories correspond to a relaxation
+    dirs = glob.glob('**/', recursive=True)
+
+    data = []
+    labels = []
+    for i, path in enumerate(dirs):
+        # Exclude some data sets
+        if (exclude_keyword is None) or (exclude_keyword not in path):
+            # Get a list of OUTCAR files
+            files = glob.glob(path + 'OUTCAR_*')
+
+            if len(files):
+                files.sort(key=lambda x: int(re.search(r'OUTCAR_(\d+)',x).group(1)))
+                data.append(files)
+                labels.append(path[:-1])
+
+
+    run_times = []
+    iterations = []
+    for outcar_files in data:
+        total_time = 0
+        steps = 0
+        for outcar in outcar_files:
+            with open(outcar) as txt:
+                res = re.findall(r'LOOP\+:\s+cpu time\s+(\d+)\.', txt.read())
+
+            if res:
+                for loop_time in res:
+                    total_time += int(loop_time)
+                    steps += 1
+
+        run_times.append(total_time / 3600)
+        iterations.append(steps)
+
+    return pd.DataFrame(dict(functional=labels, run_time_hrs=run_times, iterations=iterations))
+
 def make_list(obj):
     if type(obj) is not list:
         obj = [obj]
