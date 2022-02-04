@@ -443,17 +443,18 @@ def plot_trajectory_angles_and_distances(traj, atom1, atom2, label):
     ax = plt.subplot(2,1,1)
     angle_data.pivot(index='step', columns='atoms', values='angle').plot(ax=ax)
     plt.title(label)
-    plt.legend(title='Angle No.', loc='center left', bbox_to_anchor=(1, 0.5))
-    plt.xlabel('Step')
+    #plt.legend(title='Angle No.', loc='center left', bbox_to_anchor=(1, 0.5))
+    plt.gca().get_legend().remove()
     plt.ylabel(f'{atom1}-{atom2}-{atom1} Angle (deg)')
+    plt.tick_params('x', labelbottom=False, bottom=False)
     print(f'Final {atom1}-{atom2}-{atom1} Angle', angle_data.query(f'step=={angle_data["step"].max()}')['angle'].mean(),
           '+/-',
           angle_data.query(f'step=={angle_data["step"].max()}')['angle'].std())
 
     ax = plt.subplot(2,1,2, sharex=ax)
     distance_data.pivot(index='step', columns='atoms', values='distance').plot(ax=ax)
-    plt.title(label)
-    plt.legend(title='Bond No.', loc='center left', bbox_to_anchor=(1, 0.5))
+    #plt.legend(title='Bond No.', loc='center left', bbox_to_anchor=(1, 0.5))
+    plt.gca().get_legend().remove()
     plt.xlabel('Step')
     plt.ylabel(f'{atom1}-{atom2} Distance ($\AA$)')
 
