@@ -558,6 +558,7 @@ def compare_relaxations(relaxation_summary):
     plt.rcdefaults()
     plt.style.use(['acs'])
 
+    # Plot relative change in volume
     plt.subplots(1, 2, dpi=300, figsize=(3.25, 3.25 / 2))
     plt.subplot(1, 2, 2)
     plt.gca().grid(axis='y', linewidth=0.5)
@@ -566,11 +567,11 @@ def compare_relaxations(relaxation_summary):
         plt.bar(x=i, height=relaxation_summary.iloc[i]['delta_volume_pct'],
                 label=relaxation_summary.iloc[i]['functional'])
     plt.axhline(y=0, color='grey', linewidth=0.5)
-    plt.ylabel('$V_0$ Relative Error (%)')
+    plt.ylabel('$\Delta V_0$ (%)')
     plt.xlabel(None)
     plt.xticks([])
 
-    # Plot absolute error
+    # Plot absolute change in volume
     plt.subplot(1, 2, 1)
     plt.gca().grid(axis='y', linewidth=0.5)
     plt.gca().set_axisbelow(True)
@@ -578,7 +579,7 @@ def compare_relaxations(relaxation_summary):
         plt.bar(x=i, height=abs(relaxation_summary.iloc[i]['delta_volume_pct']),
                 label=relaxation_summary.iloc[i]['functional'])
     plt.axhline(y=0, color='grey', linewidth=0.5)
-    plt.ylabel('$V_0$ Absolute Error (%)')
+    plt.ylabel('$| \Delta V_0 |$ (%)')
     plt.xlabel(None)
     plt.xticks([])
     plt.legend(loc='best', fontsize=4, edgecolor='w', borderpad=0)
