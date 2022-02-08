@@ -508,8 +508,7 @@ def plot_vasp_relaxations(exclude_keyword=None):
 
         print(path)
 
-        incar_files = glob.glob(path + 'INCAR*')
-        incar_files.sort()
+        incar_files = [re.sub(r'OUTCAR', 'INCAR', filename) for filename in files]
         with open(incar_files[-1]) as file:
             incar = file.read()
             print(incar)
