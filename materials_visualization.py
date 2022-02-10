@@ -462,12 +462,40 @@ def plot_trajectory_angles_and_distances(traj, atom1, atom2, label):
           distance_data.query(f'step=={distance_data["step"].max()}')['distance'].mean(), '+/-',
           distance_data.query(f'step=={distance_data["step"].max()}')['distance'].std())
 
+def plot_trajectory_structure_params(traj):
+    '''
+    Plot lattice vector lengths and angles over a trajectory
+    :param traj: trajectory
+    :type traj: ASE Trajectory
+    :return:
+    :rtype:
+    '''
 
-def plot_vasp_relaxations(exclude_keyword=None):
+    fig = plt.gcf()
+    if fig is None:
+        fig = plt.figure()
+
+    # Get structure lengths and angles
+    structure = np.empty((len(traj), 6))
+    for step, atoms in enumerate(traj):
+        structure[step] = atoms.cell.cellpar()
+        structure[step] = (structure[step] - traj[0].cell.cellpar())/traj[0].cell.cellpar()
+
+    labels = ['a', 'b', 'c', 'alpha', 'beta', 'gamma']
+    for trace in range(6):
+        plt.plot(structure[:,trace], label=labels[trace])
+
+    plt.legend(loc='center left', bbox_to_anchor=(1,0.5))
+    plt.ylabel('$\Delta$ (%)')
+    plt.xlabel('Step')
+
+def plot_vasp_relaxations(exclude_keyword=None, convergence_steps=10):
     '''
     Finds all INCAR, OUTCAR files in all sub directories and plots relaxations.
     :param exclude_keyword: exclude paths that include this string
     :type exclude_keyword: str
+    :param convergence_steps: number of steps to calculate standard deviation in structural parameters
+    :type convergence_steps: int
     :return: volume change, fmax, functional, Pb-I-Pb angle, unit cell vector lengths
     :rtype: DataFrame
     '''
@@ -529,18 +557,26 @@ def plot_vasp_relaxations(exclude_keyword=None):
                      1] * 100.0,
                  c_vector_delta_pct=(traj[-1].cell.cellpar()[2] - traj[0].cell.cellpar()[2]) / traj[0].cell.cellpar()[
                      2] * 100.0,
+                 volume_delta_pct_std=np.std([(a.cell.volume - traj[0].cell.volume)/traj[0].cell.volume * 100.0
+                                    for a in traj[-len(traj)//4:]]),
+                 a_vector_std=np.std([a.cell.cellpar()[0] for a in traj[-len(traj)//4:]]),
+                 b_vector_std=np.std([a.cell.cellpar()[1] for a in traj[-len(traj)//4:]]),
+                 c_vector_std=np.std([a.cell.cellpar()[2] for a in traj[-len(traj)//4:]]),
                  ),
             index=[i]
             )
                                                        )
         plt.figure(dpi=128, figsize=(6,6))
-        mv.plot_relaxation(traj, label=label, incar_files=incar_files)
+        plot_relaxation(traj, label=label, incar_files=incar_files)
 
         # Show now so that it shows below printed info
         plt.show()
 
         plt.figure(dpi=128, figsize=(6, 6))
-        mv.plot_trajectory_angles_and_distances(traj, 'Pb', 'I', label)
+        plot_trajectory_angles_and_distances(traj, 'Pb', 'I', label)
+        plt.show()
+
+        plot_trajectory_structure_params(traj)
         plt.show()
 
     return relaxation_summary
