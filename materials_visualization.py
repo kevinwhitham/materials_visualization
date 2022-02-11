@@ -560,11 +560,11 @@ def plot_vasp_relaxations(exclude_keyword=None, convergence_steps=10):
                      1] * 100.0,
                  c_vector_delta_pct=(traj[-1].cell.cellpar()[2] - traj[0].cell.cellpar()[2]) / traj[0].cell.cellpar()[
                      2] * 100.0,
-                 volume_delta_pct_std=np.std([(a.cell.volume - traj[0].cell.volume)/traj[0].cell.volume * 100.0
-                                    for a in traj[-len(traj)//4:]]),
-                 a_vector_std=np.std([a.cell.cellpar()[0] for a in traj[-len(traj)//4:]]),
-                 b_vector_std=np.std([a.cell.cellpar()[1] for a in traj[-len(traj)//4:]]),
-                 c_vector_std=np.std([a.cell.cellpar()[2] for a in traj[-len(traj)//4:]]),
+                 volume_delta_pct_std=np.std([(atoms.cell.volume - traj[0].cell.volume)/traj[0].cell.volume * 100.0
+                                    for atoms in traj[-convergence_steps:]]),
+                 a_vector_std=np.std([atoms.cell.cellpar()[0] for atoms in traj[-convergence_steps:]]),
+                 b_vector_std=np.std([atoms.cell.cellpar()[1] for atoms in traj[-convergence_steps:]]),
+                 c_vector_std=np.std([atoms.cell.cellpar()[2] for atoms in traj[-convergence_steps:]]),
                  ),
             index=[i]
             )
@@ -603,7 +603,8 @@ def compare_relaxations(relaxation_summary):
     plt.gca().set_axisbelow(True)
     for i in relaxation_summary.index:
         plt.bar(x=i, height=relaxation_summary.iloc[i]['delta_volume_pct'],
-                label=relaxation_summary.iloc[i]['functional'])
+                label=relaxation_summary.iloc[i]['functional'],
+                yerr=relaxation_summary.iloc[i]['volume_delta_pct_std'])
     plt.axhline(y=0, color='grey', linewidth=0.5)
     plt.ylabel('$\Delta V_0$ (%)')
     plt.xlabel(None)
@@ -615,7 +616,8 @@ def compare_relaxations(relaxation_summary):
     plt.gca().set_axisbelow(True)
     for i in relaxation_summary.index:
         plt.bar(x=i, height=abs(relaxation_summary.iloc[i]['delta_volume_pct']),
-                label=relaxation_summary.iloc[i]['functional'])
+                label=relaxation_summary.iloc[i]['functional'],
+                yerr=relaxation_summary.iloc[i]['volume_delta_pct_std'])
     plt.axhline(y=0, color='grey', linewidth=0.5)
     plt.ylabel('$| \Delta V_0 |$ (%)')
     plt.xlabel(None)
