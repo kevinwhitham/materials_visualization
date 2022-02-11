@@ -1,7 +1,7 @@
 import glob
 import re
 import nglview
-from os.path import splitext
+import os.path
 import pickle
 from ase.io.vasp import read_vasp_out
 import pandas as pd
@@ -528,15 +528,18 @@ def plot_vasp_relaxations(exclude_keyword=None, convergence_steps=10):
                 paths.append(path)
 
     print('Plotting data from:', paths)
-    print('OUTCAR files', data)
+    print('OUTCAR files:')
+    for files in data:
+        base_path = os.path.commonpath(files)
+        print(f'{base_path}:\t' + ', '.join([os.path.basename(f) for f in files]))
 
     for i, files in enumerate(data):
         path = paths[i]
         label = path[:-1]  # remove trailing /
 
-        print(path)
 
         incar_files = [re.sub(r'OUTCAR', 'INCAR', filename) for filename in files]
+        print('\n'+incar_files[-1]+':')
         with open(incar_files[-1]) as file:
             incar = file.read()
             print(incar)
@@ -911,7 +914,7 @@ def plot_band_path(structure_file, band_path_str):
 
     atoms = read(structure_file)
 
-    basename, _ = splitext(structure_file)
+    basename, _ = os.path.splitext(structure_file)
 
     lat = atoms.cell.get_bravais_lattice()
 
