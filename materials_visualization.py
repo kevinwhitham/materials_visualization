@@ -319,17 +319,7 @@ def plot_relaxation(traj, label, fmax_target=0.01, incar_files=None):
     :rtype:
     '''
 
-    cols = 1
-    rows = 4
     if incar_files:
-        rows = 5
-
-    fig = plt.gcf()
-    if fig is None:
-        plt.subplots(rows, cols, figsize=(3.25, rows*3.25))
-
-    if incar_files:
-        ax = plt.subplot(rows, cols, 5)
         # Get SMASS and POTIM values
         potim = []
         smass = []
@@ -348,12 +338,28 @@ def plot_relaxation(traj, label, fmax_target=0.01, incar_files=None):
 
             with open(file_name) as incar_file:
                 txt = incar_file.read()
-                potim_value = float(re.search(r'POTIM\s+=\s+(\d*\.?\d*)', txt).group(1))
-                smass_value = float(re.search(r'SMASS\s+=\s+(\d*\.?\d*)', txt).group(1))
-                for step in range(steps):
-                    potim.append(potim_value)
-                    smass.append(smass_value)
+                potim_search = re.search(r'POTIM\s+=\s+(\d*\.?\d*)', txt)
+                smass_search = re.search(r'SMASS\s+=\s+(\d*\.?\d*)', txt)
+                if potim_search:
+                    potim_value = float(potim_search.group(1))
+                    for step in range(steps):
+                        potim.append(potim_value)
+                if smass_search:
+                    smass_value = float(smass_search.group(1))
+                    for step in range(steps):
+                        smass.append(smass_value)
 
+    cols = 1
+    rows = 4
+    if len(potim) and len(smass):
+        rows = 5
+
+    fig = plt.gcf()
+    if fig is None:
+        plt.subplots(rows, cols, figsize=(3.25, rows*3.25))
+
+    if len(potim) and len(smass):
+        ax = plt.subplot(rows, cols, 5)
         plt.plot(list(range(len(potim))), potim, 'rx-', label='POTIM')
         plt.ylabel('POTIM', color='r')
         plt.yticks(color='r')
