@@ -489,13 +489,15 @@ def plot_trajectory_structure_params(traj):
     plt.ylabel('$\Delta$ (%)')
     plt.xlabel('Step')
 
-def plot_vasp_relaxations(exclude_keyword=None, convergence_steps=10):
+def plot_vasp_relaxations(exclude_keywords=[], convergence_steps=10, fmax_target=0.01):
     '''
     Finds all INCAR, OUTCAR files in all sub directories and plots relaxations.
-    :param exclude_keyword: exclude paths that include this string
-    :type exclude_keyword: str
+    :param exclude_keywords: exclude paths that include these string
+    :type exclude_keywords: list of str
     :param convergence_steps: number of steps to calculate standard deviation in structural parameters
     :type convergence_steps: int
+    :param fmax_target: estimate the number of steps to reach this fmax
+    :type fmax_target: float
     :return: volume change, fmax, functional, Pb-I-Pb angle, unit cell vector lengths
     :rtype: DataFrame
     '''
@@ -518,7 +520,7 @@ def plot_vasp_relaxations(exclude_keyword=None, convergence_steps=10):
     for i, path in enumerate(dirs):
 
         # Exclude some data sets
-        if (exclude_keyword is None) or (exclude_keyword not in path):
+        if not any([word in path for word in exclude_keywords]):
             # Get a list of OUTCAR files
             files = glob.glob(path + 'OUTCAR_*')
 
@@ -570,7 +572,7 @@ def plot_vasp_relaxations(exclude_keyword=None, convergence_steps=10):
             )
                                                        )
         plt.figure(dpi=128, figsize=(6,6))
-        plot_relaxation(traj, label=label, incar_files=incar_files)
+        plot_relaxation(traj, label=label, incar_files=incar_files, fmax_target=fmax_target)
 
         # Show now so that it shows below printed info
         plt.show()
