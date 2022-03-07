@@ -918,8 +918,8 @@ def plot_band_path(structure_file, band_path_str):
     :type structure_file: str
     :param path: special points, e.g. 'XGY'
     :type path: str
-    :return: None
-    :rtype:
+    :return: figure
+    :rtype: Matplotlib figure
     '''
 
     atoms = read(structure_file)
@@ -933,7 +933,10 @@ def plot_band_path(structure_file, band_path_str):
     bp = atoms.cell.bandpath(band_path_str, 48)
     reduced_bp = lat.bandpath(band_path_str, 48)
 
-    plt.figure(figsize=(8, 8), dpi=128)
+    fig = plt.gcf()
+    if fig is None:
+        fig = plt.figure(figsize=(8, 8), dpi=128)
+
     bp.plot()
     plt.savefig(f'{basename}_band_path.png')
 
@@ -948,3 +951,5 @@ def plot_band_path(structure_file, band_path_str):
         file.write(f'a={atoms.cell.cellpar()[0]:.4f}, b={atoms.cell.cellpar()[1]:.4f}, c={atoms.cell.cellpar()[2]:.4f}\n')
         for p in list(band_path_str):
             file.write(f'{p}: {bp.special_points[p]}\n')
+
+    return fig
