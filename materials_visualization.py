@@ -928,8 +928,6 @@ def plot_band_path(structure_file, band_path_str):
 
     lat = atoms.cell.get_bravais_lattice()
 
-    print(lat.description())
-
     bp = atoms.cell.bandpath(band_path_str, 48)
     reduced_bp = lat.bandpath(band_path_str, 48)
 
