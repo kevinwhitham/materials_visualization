@@ -934,8 +934,11 @@ def plot_band_path(structure_file, band_path_str):
     if fig is None:
         fig = plt.figure(figsize=(8, 8), dpi=128)
 
-    bp.plot()
-    plt.savefig(f'{basename}_band_path.png')
+    # Increase the size of the special point labels
+    import matplotlib as mpl
+    with mpl.rc_context(rc={'font.size': 12}):
+        bp.plot()
+        plt.savefig(f'{basename}_band_path.png')
 
     with open(f'{basename}_band_path.log', 'w') as file:
         file.write('Reduced Bravais Lattice:\n')
