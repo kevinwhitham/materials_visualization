@@ -36,7 +36,6 @@ def show_ngl_row(mols, show_indices=False, captions=None, trajectories=False, vi
 
         # The default view axis is z
         if view_axis == 'x':
-            view.control.spin([1, 0, 0], math.pi / 2)
             view.control.spin([0, 1, 0], math.pi / 2)
         elif view_axis == 'z':
             continue
