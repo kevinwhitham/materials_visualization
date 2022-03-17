@@ -59,7 +59,7 @@ def show_ngl_row(mols, show_indices=False, captions=None, trajectories=False, vi
             for view in views:
                 view.center()
 
-    return result
+    return result, views
 
 
 
