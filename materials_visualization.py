@@ -587,6 +587,7 @@ def plot_vasp_relaxations(exclude_keywords=[], convergence_steps=10, fmax_target
         plot_trajectory_angles_and_distances(traj, 'Pb', 'I', label)
         plt.show()
 
+        plt.figure(dpi=128, figsize=(6,3))
         plot_trajectory_structure_params(traj)
         plt.show()
 
