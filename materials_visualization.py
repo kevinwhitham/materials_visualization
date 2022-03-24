@@ -846,8 +846,7 @@ def plot_bands(e_mk, path_data,
     if plt.gca() is None:
         plt.figure(figsize=(4, 3), dpi=128)
 
-    plt.xticks(X, labels, size=10)
-    plt.yticks(size=10)
+    plt.xticks(X, labels)
 
     # Plot vertical grey lines at each symmetry point label
     for i in range(len(X))[1:-1]:
@@ -895,7 +894,7 @@ def plot_bands(e_mk, path_data,
 
     # Plot a horizontal dotted grey line at zero energy
     plt.plot([0.0, x[-1]], 2 * [0.0], c='0.5', linestyle=':')
-    plt.ylabel(r'$\varepsilon_n(k)$ [eV]', size=10)
+    plt.ylabel(r'$\varepsilon_n(k)$ [eV]')
     plt.axis([0, x[-1], min_plot_energy, max_plot_energy])
 
     if len(bands_to_highlight):
