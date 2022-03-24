@@ -13,7 +13,7 @@ import math
 from ipywidgets import HBox, VBox, Label
 import numpy as np
 import ase.units
-
+from gpaw import GPAW
 
 def show_ngl_row(mols, show_indices=False, captions=None, trajectories=False, view_axis='y', show_cell=True):
     mols = make_list(mols)
@@ -716,13 +716,19 @@ def get_band_orbital_weights(bs_calc, species, n, orbital, M=None, atoms=None, f
 
     :param bs_calc: band structure calculator
     :param species: string of atomic species e.g. 'Pb'
-    :param n: band index
+    :param n: principal quantum number
     :param orbital: string of orbital e.g. 's', 'p'
+    :param M: list of total angular momentum to plot. Can be any integers from -L to L (i.e. -1,0,1 for orbital="s")
+    :param atoms: limit contribution to specific atom indices
     :param f_kmsi: for spin-orbit bands, provide the projections
     :returns array (k-points x bands)
     '''
 
+    if type(bs_calc) is str:
+        bs_calc = GPAW(bs_calc)
+
     if f_kmsi is not None:
+        # add spin up and spin down contributions to each band
         f_kni = abs(f_kmsi[:, :, 0, :]) + abs(f_kmsi[:, :, 1, :])
     else:
         # projectors method works for LCAO calculations
