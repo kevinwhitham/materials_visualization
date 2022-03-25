@@ -139,7 +139,7 @@ def plot_fmax_vs_time(timing_filenames, labels=None):
         timing_summary = timing_summary.append(
             pd.DataFrame(data=[[timing_file, len(timing_data)]], columns=summary_col_names), ignore_index=True)
 
-    display(timing_summary)
+    print(timing_summary)
     plt.tight_layout()
     plt.yscale('log')
     plt.xlabel('Time (hours)')
