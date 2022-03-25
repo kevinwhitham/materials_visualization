@@ -866,15 +866,18 @@ def plot_bands(e_mk, path_data,
     band_min = np.min(e_mk, axis=1)
     bands_to_plot = np.argwhere((band_max > min_plot_energy) & (band_min < max_plot_energy))
     for band in bands_to_plot:
+        e_k = np.array(e_mk[band]).flatten()
         if weight_nk is None:
             if thickness is None:
                 thickness = 0.5
 
-            plt.plot(x, e_mk[band].flatten(), c='0.5', linewidth=thickness)
+            plt.plot(x, e_k, c='0.5', linewidth=thickness)
 
         else:
             if thickness is None:
                 thickness = 200
+
+            weight_k = np.array(weight_nk[band]).flatten()
 
             # If weights are given, use them to color the data
             # don't normalize because we want the weight to be normed relative to
@@ -887,20 +890,20 @@ def plot_bands(e_mk, path_data,
             weight_cmap = LinearSegmentedColormap.from_list('weight_cmap', colors)
 
             # Vary line thickness and color
-            points = np.array([np.array(x), np.array(e_mk[band]).flatten()]).T.reshape(-1, 1, 2)
+            points = np.array([np.array(x), e_k]).T.reshape(-1, 1, 2)
             segments = np.concatenate([points[:-1], points[1:]], axis=1)
             lc = LineCollection(segments, cmap=weight_cmap)
-            lc.set_array(np.array(weight_nk[band]).flatten())
-            lc.set_linewidth(np.array(weight_nk[band]).flatten()*thickness/plt.gcf().dpi*72)  # can set width of each segment here as sequence
+            lc.set_array(weight_k)
+            lc.set_linewidth(weight_k*thickness/plt.gcf().dpi*72)  # can set width of each segment here as sequence
             line = plt.gca().add_collection(lc)
 
             # Vary color and thickness by weight
-            #plt.scatter(x, e_mk[band], c=weight_nk[band], cmap=weight_cmap, vmin=0, vmax=1, marker='.',
-            #            s=thickness * weight_nk[band], edgecolors='none')
+            #plt.scatter(x, e_k, c=weight_k, cmap=weight_cmap, vmin=0, vmax=1, marker='.',
+            #            s=thickness * weight_k, edgecolors='none')
 
             # Vary just thickness by weight
             #plt.scatter(x, e_mk[band], color=weight_color, marker='.',
-            #            s=thickness * weight_nk[band], alpha=0.5, edgecolors='none')
+            #            s=thickness * weight_k, alpha=0.5, edgecolors='none')
 
     # for the legend
     if weight_nk is not None:
