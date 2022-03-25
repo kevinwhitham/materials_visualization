@@ -886,7 +886,7 @@ def plot_bands(e_mk, path_data,
             from matplotlib.collections import LineCollection
             weight_cmap = LinearSegmentedColormap.from_list('weight_cmap', [weight_color, weight_color], N=256)
             colors = weight_cmap(np.arange(weight_cmap.N))
-            colors[:,-1] = np.linspace(0, 1, weight_cmap.N)  # Set linearly varying alpha from 0 to 1
+            colors[:,-1] = np.linspace(0, 0.5, weight_cmap.N)  # Set linearly varying alpha from 0 to 0.5
             weight_cmap = LinearSegmentedColormap.from_list('weight_cmap', colors)
 
             # Vary line thickness and color
