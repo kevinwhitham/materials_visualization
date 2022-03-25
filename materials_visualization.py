@@ -861,9 +861,6 @@ def plot_bands(e_mk, path_data,
                  c='0.5', linewidth=0.5)
 
     # Plot the spin-orbit corrected bands in grey
-    # If weights are given, use them to color the data
-    from matplotlib.colors import LinearSegmentedColormap
-    weight_cmap = LinearSegmentedColormap.from_list('weight_cmap', [(1,1,1),weight_color], N=256)
 
     band_max = np.max(e_mk, axis=1)
     band_min = np.min(e_mk, axis=1)
@@ -879,17 +876,35 @@ def plot_bands(e_mk, path_data,
             if thickness is None:
                 thickness = 200
 
+            # If weights are given, use them to color the data
+            # don't normalize because we want the weight to be normed relative to
+            # all bands, not relative to just this band
+            from matplotlib.colors import LinearSegmentedColormap
+            from matplotlib.collections import LineCollection
+            weight_cmap = LinearSegmentedColormap.from_list('weight_cmap', [weight_color, weight_color], N=256)
+            colors = weight_cmap(np.arange(weight_cmap.N))
+            colors[:,-1] = np.linspace(0, 1, weight_cmap.N)  # Set linearly varying alpha from 0 to 1
+            weight_cmap = LinearSegmentedColormap.from_list('weight_cmap', colors)
+
+            # Vary line thickness and color
+            points = np.array([np.array(x), np.array(e_mk[band]).flatten()]).T.reshape(-1, 1, 2)
+            segments = np.concatenate([points[:-1], points[1:]], axis=1)
+            lc = LineCollection(segments, cmap=weight_cmap)
+            lc.set_array(np.array(weight_nk[band]).flatten())
+            lc.set_linewidth(np.array(weight_nk[band]).flatten()*thickness/plt.gcf().dpi*72)  # can set width of each segment here as sequence
+            line = plt.gca().add_collection(lc)
+
             # Vary color and thickness by weight
-            # plt.scatter(x, e_mk[band], c=weight_nk[band], cmap=weight_cmap, vmin=0, vmax=1, marker='.',
-            #             s=thickness * weight_nk[band], alpha=0.5, edgecolors='none')
+            #plt.scatter(x, e_mk[band], c=weight_nk[band], cmap=weight_cmap, vmin=0, vmax=1, marker='.',
+            #            s=thickness * weight_nk[band], edgecolors='none')
 
             # Vary just thickness by weight
-            plt.scatter(x, e_mk[band], color=weight_color, marker='.',
-                        s=thickness * weight_nk[band], alpha=0.5, edgecolors='none')
+            #plt.scatter(x, e_mk[band], color=weight_color, marker='.',
+            #            s=thickness * weight_nk[band], alpha=0.5, edgecolors='none')
 
     # for the legend
     if weight_nk is not None:
-        plt.scatter(x[0], e_mk[0,0], color=weight_color, label=weight_label)
+        plt.plot(x[0], e_mk[0, 0], color=weight_color, label=weight_label)
 
     # Plot the bands of interest in colors
     # Plot in descending order so that the legend shows higher energy bands at the top
