@@ -852,6 +852,7 @@ def plot_bands(e_mk, path_data,
     else:
         x, X, orig_labels = path_data
 
+    x = np.array(x)
     labels = [pretty_label(l) for l in orig_labels]
 
     # Band structure diagrams
@@ -865,7 +866,53 @@ def plot_bands(e_mk, path_data,
         plt.plot(2 * [X[i]], [min_plot_energy, max_plot_energy],
                  c='0.5', linewidth=0.5)
 
-    # Plot the spin-orbit corrected bands in grey
+    # Some different methods of drawing variable width band curves
+    # Vary color and thickness by weight using scatter plot
+    def draw_fat_band_scatter(x, y, width, color_map):
+        plt.scatter(x, y, c=width, cmap=color_map, vmin=0, vmax=1, marker='.',
+                    s=width, edgecolors='none')
+
+    # Vary line thickness and color (alpha) with a collection of lines
+    def draw_fat_band_line_collection(x, y, width, color_map):
+        # If weights are given, use them to color the data
+        # don't normalize because we want the weight to be normed relative to
+        # all bands, not relative to just this band
+        from matplotlib.collections import LineCollection
+        points = np.array([x, y]).T.reshape(-1, 1, 2)
+        segments = np.concatenate([points[:-1], points[1:]], axis=1)
+        lc = LineCollection(segments, cmap=color_map)
+        lc.set_array(width)
+        lc.set_linewidth(width)
+        plt.gca().add_collection(lc)
+
+    # Vary line width only using bezier curves
+    # Haven't figure out how to vary color along a bezier curve
+    def draw_fat_band_bezier(x, y, width, color_map):
+        from matplotlib.path import Path
+        from matplotlib.patches import PathPatch
+        # Calculate normals via centered finite differences (except the first point
+        # which uses a forward difference and the last point which uses a backward
+        # difference).
+        dx = np.concatenate([[x[1] - x[0]], x[2:] - x[:-2], [x[-1] - x[-2]]])
+        dy = np.concatenate([[y[1] - y[0]], y[2:] - y[:-2], [y[-1] - y[-2]]])
+        l = np.hypot(dx, dy)
+        nx = dy / l
+        ny = -dx / l
+
+        # end points of width
+        # convert width from points to a percentage
+        width = width/100.0
+        xp = x + nx * width
+        yp = y + ny * width
+        xn = x - nx * width
+        yn = y - ny * width
+
+        vertices = np.block([[xp, xn[::-1]],
+                             [yp, yn[::-1]]]).T
+        codes = np.full(len(vertices), Path.LINETO)
+        codes[0] = Path.MOVETO
+        path = Path(vertices, codes)
+        plt.gca().add_patch(PathPatch(path, facecolor=color_map(1.0), edgecolor='none'))
 
     band_max = np.max(e_mk, axis=1)
     band_min = np.min(e_mk, axis=1)
@@ -880,39 +927,25 @@ def plot_bands(e_mk, path_data,
 
         else:
             if thickness is None:
-                thickness = 200
+                thickness = 1
 
             weight_k = np.array(weight_nk[band]).flatten()
 
-            # If weights are given, use them to color the data
-            # don't normalize because we want the weight to be normed relative to
-            # all bands, not relative to just this band
+            # Make a color map for band curves
+            # Color or alpha can vary with the weight
             from matplotlib.colors import LinearSegmentedColormap
-            from matplotlib.collections import LineCollection
             weight_cmap = LinearSegmentedColormap.from_list('weight_cmap', [weight_color, weight_color], N=256)
             colors = weight_cmap(np.arange(weight_cmap.N))
             colors[:,-1] = np.linspace(0, 0.5, weight_cmap.N)  # Set linearly varying alpha from 0 to 0.5
             weight_cmap = LinearSegmentedColormap.from_list('weight_cmap', colors)
 
-            # Vary line thickness and color
-            points = np.array([np.array(x), e_k]).T.reshape(-1, 1, 2)
-            segments = np.concatenate([points[:-1], points[1:]], axis=1)
-            lc = LineCollection(segments, cmap=weight_cmap)
-            lc.set_array(weight_k)
-            lc.set_linewidth(weight_k*thickness/plt.gcf().dpi*72)  # can set width of each segment here as sequence
-            line = plt.gca().add_collection(lc)
+            #draw_fat_band_line_collection(x, e_k, thickness*weight_k/plt.gcf().dpi*72, weight_cmap)
+            draw_fat_band_bezier(x, e_k, thickness*weight_k, weight_cmap)
 
-            # Vary color and thickness by weight
-            #plt.scatter(x, e_k, c=weight_k, cmap=weight_cmap, vmin=0, vmax=1, marker='.',
-            #            s=thickness * weight_k, edgecolors='none')
-
-            # Vary just thickness by weight
-            #plt.scatter(x, e_mk[band], color=weight_color, marker='.',
-            #            s=thickness * weight_k, alpha=0.5, edgecolors='none')
 
     # for the legend
     if weight_nk is not None:
-        plt.plot(x[0], e_mk[0, 0], color=weight_color, label=weight_label)
+        plt.plot(x[0], e_mk[0, 0], color=weight_color, label=weight_label, linewidth=thickness)
 
     # Plot the bands of interest in colors
     # Plot in descending order so that the legend shows higher energy bands at the top
