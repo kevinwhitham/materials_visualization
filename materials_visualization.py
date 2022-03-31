@@ -608,7 +608,10 @@ def compare_relaxations(relaxation_summary):
     plt.style.use(['acs'])
 
     # Plot relative change in volume
-    plt.subplots(1, 2, dpi=300, figsize=(3.25, 3.25 / 2))
+    fig = plt.gcf()
+    if fig is None:
+        plt.subplots(1, 2)
+
     plt.subplot(1, 2, 2)
     plt.gca().grid(axis='y', linewidth=0.5)
     plt.gca().set_axisbelow(True)
@@ -633,12 +636,12 @@ def compare_relaxations(relaxation_summary):
     plt.ylabel('$| \Delta V_0 |$ (%)')
     plt.xlabel(None)
     plt.xticks([])
-    plt.legend(loc='best', fontsize=4, edgecolor='w', borderpad=0)
+    plt.legend(loc='best', edgecolor='w', borderpad=0)
 
     # Add panel labels
     for i, label in enumerate(('a', 'b')):
         ax = plt.subplot(1, 2, i + 1)
-        ax.text(-0.1, 1.15, label, transform=ax.transAxes,
+        ax.text(-0.2, 1.1, label, transform=ax.transAxes,
                 fontsize=6, fontweight='bold', va='top', ha='right')
 
     plt.tight_layout()
