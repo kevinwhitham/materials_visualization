@@ -416,7 +416,9 @@ def plot_relaxation(traj, label, fmax_target=0.01, incar_files=None):
     plt.tick_params('x', labelbottom=False, bottom=False)
 
     plt.subplot(rows, cols, 3, sharex=ax)
-    plt.plot(list(range(len(traj))), [a.get_potential_energy() for a in traj], label=label)
+    energy = np.array([a.get_potential_energy() for a in traj])
+    print(f'Last delta E: {energy[-1]-energy[-2]:0.2e}')
+    plt.plot(energy, label=label)
     plt.ylabel('Energy (eV)')
     plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
     plt.tick_params('x', labelbottom=False, bottom=False)
