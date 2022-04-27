@@ -246,8 +246,14 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
             vertex_atom_indices = all_vertex_atom_indices[np.argsort(all_distances[center_atom_index][all_vertex_atom_indices])][:6]
             #print('vertex_atom_indices', vertex_atom_indices)
             # Choose four vertices closest to the center in the apical direction
-            equitorial_vertex_atom_indices = vertex_atom_indices[np.argsort([np.abs(atoms.get_distance(center_atom_index, vertex_index, vector=True, mic=True)[apical_axis]) for vertex_index in vertex_atom_indices])][:4]
-            #print('equitorial_vertex_atom_indices', equitorial_vertex_atom_indices)
+            equitorial_vertex_atom_indices = vertex_atom_indices[np.argsort(
+                [np.abs(atoms.get_distance(center_atom_index, vertex_index, vector=True, mic=True)[apical_axis]) for
+                 vertex_index in vertex_atom_indices])][:4]
+            apical_vertex_atom_indices = vertex_atom_indices[np.argsort(
+                [np.abs(atoms.get_distance(center_atom_index, vertex_index, vector=True, mic=True)[apical_axis]) for
+                 vertex_index in vertex_atom_indices])][-2:]
+
+            # print('equitorial_vertex_atom_indices', equitorial_vertex_atom_indices)
             for vertex_atom_index in equitorial_vertex_atom_indices:
                 if len(second_center_atom_indices):
                     # Get nearest atom of type center_atom_symbol that is not center_atom_index
@@ -259,15 +265,56 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
                     #print('distance_sorted_center_atom_indices', distance_sorted_center_atom_indices)
                     nearest_center_atom_index = distance_sorted_center_atom_indices[0]
                     if any(nearest_center_atom_index == second_center_atom_indices):
+                        apical_vector = atoms.get_distance(apical_vertex_atom_indices[0],
+                                                           apical_vertex_atom_indices[1],
+                                                           mic=True,
+                                                           vector=True)
+                        pb_pb_vector = atoms.get_distance(nearest_center_atom_index,
+                                                          center_atom_index,
+                                                          mic=True,
+                                                          vector=True)
+                        apical_vector = apical_vector / np.linalg.norm(apical_vector)
+                        pb_pb_vector = pb_pb_vector / np.linalg.norm(pb_pb_vector)
+                        ab_indices = np.setxor1d([0,1,2], [apical_axis])
+                        ab_normal_vector = np.cross(atoms.cell[ab_indices[0]], atoms.cell[ab_indices[1]])
+                        ab_normal_vector = ab_normal_vector / np.linalg.norm(ab_normal_vector)
+                        tilt_angle = 180/np.pi * np.arccos(np.dot(apical_vector, ab_normal_vector))
+                        tilt_angle = min(tilt_angle, abs(180-tilt_angle))
+
+                        # Calculate the in-plane angle by projecting the vertex atom onto
+                        # a plane defined by the center atom in adjacent unit cells
+                        center_atom_position = atoms.positions[center_atom_index]
+                        center_atom_plane_points = np.array([center_atom_position,
+                                                             center_atom_position + atoms.cell[ab_indices[0]],
+                                                             center_atom_position + atoms.cell[ab_indices[1]]])
+                        center_atom_plane_normal = np.cross(center_atom_plane_points[1]-center_atom_plane_points[0],
+                                                            center_atom_plane_points[2]-center_atom_plane_points[0])
+                        center_atom_plane_normal = center_atom_plane_normal / np.linalg.norm(center_atom_plane_normal)
+                        vector_1 = atoms.get_distance(vertex_atom_index, center_atom_index, mic=True, vector=True)
+                        vector_2 = atoms.get_distance(vertex_atom_index, nearest_center_atom_index, mic=True, vector=True)
+                        proj_vector_1 = vector_1 - np.dot(vector_1, center_atom_plane_normal)*center_atom_plane_normal
+                        proj_vector_1 = proj_vector_1 / np.linalg.norm(proj_vector_1)
+                        proj_vector_2 = vector_2 - np.dot(vector_2, center_atom_plane_normal)*center_atom_plane_normal
+                        proj_vector_2 = proj_vector_2 / np.linalg.norm(proj_vector_2)
+                        in_plane_angle = 180.0/np.pi * np.arccos(np.dot(proj_vector_1, proj_vector_2))
+
                         angle_data = angle_data.append(pd.DataFrame(dict(step=step,
-                                                            angle=atoms.get_angle(center_atom_index,
-                                                                                  vertex_atom_index,
-                                                                                  nearest_center_atom_index, mic=True),
-                                                            atoms=','.join(map(str,[center_atom_index,
-                                                                            vertex_atom_index,
-                                                                            nearest_center_atom_index]))),
-                                                       index=[0]),
-                                          ignore_index=True)
+                                                                         angle=atoms.get_angle(center_atom_index,
+                                                                                               vertex_atom_index,
+                                                                                               nearest_center_atom_index,
+                                                                                               mic=True),
+                                                                         atoms=','.join(map(str, [center_atom_index,
+                                                                                                  vertex_atom_index,
+                                                                                                  nearest_center_atom_index])),
+                                                                         tilt_angle=tilt_angle,
+                                                                         tilt_atoms=','.join(map(str,
+                                                                                                 [nearest_center_atom_index,
+                                                                                                  center_atom_index,
+                                                                                                  apical_vertex_atom_indices[0],
+                                                                                                  apical_vertex_atom_indices[1]])),
+                                                                         in_plane_angle=in_plane_angle),
+                                                                    index=[0]),
+                                                       ignore_index=True)
 
                 distance_data = distance_data.append(pd.DataFrame(dict(step=step,
                                                                        distance=all_distances[center_atom_index][vertex_atom_index],
