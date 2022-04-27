@@ -14,6 +14,7 @@ from ipywidgets import HBox, VBox, Label
 import numpy as np
 import ase.units
 from gpaw import GPAW
+from intercalation import find_ammonium_atoms
 
 def show_ngl_row(mols, show_indices=False, captions=None, trajectories=False, view_axis='y', show_cell=True):
     mols = make_list(mols)
@@ -327,7 +328,80 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
 
     return angle_data, distance_data
 
+def get_penetration_distances(atoms, center_species, vertex_species, apical_direction):
+    '''
+    Calculate the position of ammonium nitrogen atoms relative to other atoms:
+        N to vertex distance: mean distance between each ammonium N atom and the 4 nearest vertex atoms
+        N to center distance: distance from the plane
+        penetration distance:
+    :param atoms: the structure to analyze
+    :type atoms: ASE atom object
+    :param center_species: symbol for the atom type at the octahedral center (e.g. Pb)
+    :type center_species: str
+    :param vertex_species: symbol for the atom type at the vertices of the octahedron (e.g. I)
+    :type vertex_species: str
+    :param apical_direction: direction normal to the plane containing sheets of octahedra
+    :type apical_direction: 3 element array
+    :return: N to vertex distances, N to center distance, penetration distances
+    :rtype: tuple
+    '''
 
+    # Get unit vector in apical direction
+    apical_direction = apical_direction / np.linalg.norm(apical_direction)
+
+    # Lists to save metrics
+    n_to_x_dist = []
+    c_to_n_dist = []
+    n_to_apical_x_dist = []
+
+    # Save static info about the crystal structure
+    all_vectors = atoms.get_all_distances(mic=True, vector=True)
+    all_distances = atoms.get_all_distances(mic=True)
+    x_indices = [a.index for a in atoms if a.symbol == vertex_species]
+    c_indices = [a.index for a in atoms if a.symbol == center_species]
+
+    for n_atom in find_ammonium_atoms(atoms):
+        # Sort nitrogen to vertex atom vectors by length
+        # Out of the shortest 8, choose the four vertex atoms farthest from the closest center atom in the apical dir.
+        nearest_eight_x_atoms = np.take(x_indices, np.argsort(all_distances[n_atom][x_indices]))[:8]
+        nearest_c_atom = np.array(c_indices)[np.argsort(all_distances[n_atom][c_indices])][0]
+        c_to_nearest_eight_x_vectors = all_vectors[nearest_c_atom][nearest_eight_x_atoms]
+        c_to_nearest_eight_x_apical_vectors = np.outer(np.dot(c_to_nearest_eight_x_vectors, apical_direction),
+                                                       apical_direction)
+        c_to_nearest_eight_x_apical_distances = np.abs(np.linalg.norm(c_to_nearest_eight_x_apical_vectors, axis=1))
+        nearest_four_apical_x_indices = nearest_eight_x_atoms[np.argsort(c_to_nearest_eight_x_apical_distances)][-4:]
+
+        # Save the mean distance from an N atom to the nearest 4 apical vertex atoms
+        n_to_x_dist.append(np.mean(all_distances[n_atom][nearest_four_apical_x_indices]))
+
+        # Get distance from N atom to nearest center atom in apical direction
+        n_to_nearest_c_vector = all_vectors[n_atom][nearest_c_atom]
+        n_to_nearest_c_apical_vector = np.outer(np.dot(n_to_nearest_c_vector, apical_direction), apical_direction)
+        n_to_nearest_c_apical_distance = np.linalg.norm(n_to_nearest_c_apical_vector)
+        c_to_n_dist.append(n_to_nearest_c_apical_distance)
+
+        # Get the distance from the N atom to the 4 nearest vertex atoms that are within 1.5 Ang. of the N atom in the z-direction
+        n_to_nearest_four_apical_x_vectors = all_vectors[n_atom][nearest_four_apical_x_indices]
+        n_to_nearest_four_apical_x_apical_vectors = np.outer(np.dot(n_to_nearest_four_apical_x_vectors,
+                                                                    apical_direction),
+                                                             apical_direction)
+        n_to_x_apical_distances = np.linalg.norm(n_to_nearest_four_apical_x_apical_vectors, axis=1)
+
+        # Determine if the penetration distance is:
+        # positive (N atom between apical vertex atoms and center atoms)
+        # negative (apical vertex atom between N atom and center atoms)
+        for i in range(len(n_to_x_apical_distances)):
+            # If N atom to nearest c atom in the apical direction is greater than
+            # x atom to c atom in apical direction, the penetration is negative
+            if n_to_nearest_c_apical_distance > max(c_to_nearest_eight_x_apical_distances):
+                n_to_x_apical_distances[i] *= -1.0
+
+        # Save the mean z-distance from an N atom to the nearest 4 axial I atoms
+        n_to_apical_x_dist.append(np.mean(n_to_x_apical_distances))
+
+    return pd.DataFrame(dict(n_to_x_distances=n_to_x_dist,
+                             c_to_n_distances=c_to_n_dist,
+                             penetration_distances=n_to_apical_x_dist))
 
 def vasp_to_trajectory(outcar_filenames, trajectory_filename):
     '''
