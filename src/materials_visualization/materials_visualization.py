@@ -14,7 +14,7 @@ from ipywidgets import HBox, VBox, Label
 import numpy as np
 import ase.units
 from gpaw import GPAW
-from intercalation import find_ammonium_atoms
+from perovskite_intercalation import find_ammonium_atoms
 
 def show_ngl_row(mols, show_indices=False, captions=None, trajectories=False, view_axis='y', show_cell=True):
     mols = make_list(mols)
@@ -201,6 +201,7 @@ def plot_unit_cell_volume_change(trajectories, labels):
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     return fig
 
+
 def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, trajectory, plane_of_interest='xy'):
     '''
     Plots the angle connecting octahedral centers over a trajectory.
@@ -242,10 +243,11 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
 
             # Remove the center atom index to avoid double counting
             second_center_atom_indices = np.delete(second_center_atom_indices,
-                                                    np.argwhere(second_center_atom_indices == center_atom_index))
+                                                   np.argwhere(second_center_atom_indices == center_atom_index))
 
-            vertex_atom_indices = all_vertex_atom_indices[np.argsort(all_distances[center_atom_index][all_vertex_atom_indices])][:6]
-            #print('vertex_atom_indices', vertex_atom_indices)
+            vertex_atom_indices = all_vertex_atom_indices[
+                                      np.argsort(all_distances[center_atom_index][all_vertex_atom_indices])][:6]
+            # print('vertex_atom_indices', vertex_atom_indices)
             # Choose four vertices closest to the center in the apical direction
             equitorial_vertex_atom_indices = vertex_atom_indices[np.argsort(
                 [np.abs(atoms.get_distance(center_atom_index, vertex_index, vector=True, mic=True)[apical_axis]) for
@@ -258,12 +260,14 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
             for vertex_atom_index in equitorial_vertex_atom_indices:
                 if len(second_center_atom_indices):
                     # Get nearest atom of type center_atom_symbol that is not center_atom_index
-                    #print('center_atom_index', center_atom_index)
-                    #print('all_center_atom_indices', all_center_atom_indices)
-                    #print('vertex_atom_index', vertex_atom_index)
-                    distance_sorted_center_atom_indices = all_center_atom_indices[np.argsort(all_distances[vertex_atom_index][all_center_atom_indices])]
-                    distance_sorted_center_atom_indices = np.delete(distance_sorted_center_atom_indices, np.argwhere(distance_sorted_center_atom_indices == center_atom_index))
-                    #print('distance_sorted_center_atom_indices', distance_sorted_center_atom_indices)
+                    # print('center_atom_index', center_atom_index)
+                    # print('all_center_atom_indices', all_center_atom_indices)
+                    # print('vertex_atom_index', vertex_atom_index)
+                    distance_sorted_center_atom_indices = all_center_atom_indices[
+                        np.argsort(all_distances[vertex_atom_index][all_center_atom_indices])]
+                    distance_sorted_center_atom_indices = np.delete(distance_sorted_center_atom_indices, np.argwhere(
+                        distance_sorted_center_atom_indices == center_atom_index))
+                    # print('distance_sorted_center_atom_indices', distance_sorted_center_atom_indices)
                     nearest_center_atom_index = distance_sorted_center_atom_indices[0]
                     if any(nearest_center_atom_index == second_center_atom_indices):
                         apical_vector = atoms.get_distance(apical_vertex_atom_indices[0],
@@ -318,13 +322,12 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
                                                        ignore_index=True)
 
                 distance_data = distance_data.append(pd.DataFrame(dict(step=step,
-                                                                       distance=all_distances[center_atom_index][vertex_atom_index],
-                                                                       atoms=','.join(map(str,[center_atom_index, vertex_atom_index]))),
+                                                                       distance=all_distances[center_atom_index][
+                                                                           vertex_atom_index],
+                                                                       atoms=','.join(map(str, [center_atom_index,
+                                                                                                vertex_atom_index]))),
                                                                   index=[0]),
                                                      ignore_index=True)
-
-
-
 
     return angle_data, distance_data
 
@@ -817,6 +820,7 @@ def make_list(obj):
         obj = [obj]
     return obj
 
+
 def load_bands(filename):
     '''
     Load a 2D numpy array file of eigenvalues vs k-points.
@@ -827,12 +831,12 @@ def load_bands(filename):
     '''
 
     e_mk = np.load(filename)
-    emax_n = np.max(e_mk, axis=1) # greatest eigenvalue per band
+    emax_n = np.max(e_mk, axis=1)  # greatest eigenvalue per band
     soc_vb_n = max(np.argwhere(emax_n < 0))[0]  # Fermi level should be at zero energy
 
     print('Bands:', e_mk.shape[0])
     print('K-points:', e_mk.shape[1])
-    print('Valence band index: ',soc_vb_n)
+    print('Valence band index: ', soc_vb_n)
 
     return e_mk
 
@@ -903,12 +907,14 @@ def get_band_orbital_weights(bs_calc, species, n, orbital, M=None, atoms=None, f
 
 
 
-def plot_bands(e_mk, path_data,
+def plot_bands(e_mk,
+               path_data,
                energy_limits,
-               bands_to_highlight=None, band_labels=None,
+               bands_to_highlight=None,
+               band_labels=None,
                title=None,
                weight_nk=None,
-               weight_color=(1,0,0),
+               weight_color=(1, 0, 0),
                weight_label=None,
                thickness=None):
     '''
@@ -1057,7 +1063,7 @@ def plot_bands(e_mk, path_data,
             from matplotlib.colors import LinearSegmentedColormap
             weight_cmap = LinearSegmentedColormap.from_list('weight_cmap', [weight_color, weight_color], N=256)
             colors = weight_cmap(np.arange(weight_cmap.N))
-            colors[:,-1] = np.linspace(0, 0.5, weight_cmap.N)  # Set linearly varying alpha from 0 to 0.5
+            colors[:, -1] = np.linspace(0, 0.5, weight_cmap.N)  # Set linearly varying alpha from 0 to 0.5
             weight_cmap = LinearSegmentedColormap.from_list('weight_cmap', colors)
 
             #draw_fat_band_line_collection(x, e_k, thickness*weight_k/plt.gcf().dpi*72, weight_cmap)
@@ -1132,7 +1138,8 @@ def plot_band_path(structure_file, band_path_str):
         for p in list(band_path_str):
             file.write(f'{p}: {reduced_bp.special_points[p]}\n')
         file.write('K-points for structure as input:\n')
-        file.write(f'a={atoms.cell.cellpar()[0]:.4f}, b={atoms.cell.cellpar()[1]:.4f}, c={atoms.cell.cellpar()[2]:.4f}\n')
+        file.write(
+            f'a={atoms.cell.cellpar()[0]:.4f}, b={atoms.cell.cellpar()[1]:.4f}, c={atoms.cell.cellpar()[2]:.4f}\n')
         for p in list(band_path_str):
             file.write(f'{p}: {bp.special_points[p]}\n')
 
