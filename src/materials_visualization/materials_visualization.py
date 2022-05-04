@@ -364,18 +364,36 @@ def get_penetration_distances(atoms, center_species, vertex_species, apical_dire
     c_indices = [a.index for a in atoms if a.symbol == center_species]
 
     for n_atom in find_ammonium_atoms(atoms):
+        # Need to use a supercell because an single atom index
+        # may need to be used more than once, but in difference unit cells
+        # First get all n-x distances
+        n_x_vectors = all_vectors[n_atom][x_indices]
+
+        # Then get n-x distances to adjacent unit cells
+        translated_n_x_vectors = np.empty((len(n_x_vectors)*7, 3))
+        for i,v in enumerate(n_x_vectors):
+            # Add vectors from n_atom to x atoms translated to unit cells +/- in a,b,c
+            translated_n_x_vectors[7 * i] = v
+            translated_n_x_vectors[7 * i + 1] = v + atoms.cell[0]
+            translated_n_x_vectors[7 * i + 2] = v - atoms.cell[0]
+            translated_n_x_vectors[7 * i + 3] = v + atoms.cell[1]
+            translated_n_x_vectors[7 * i + 4] = v - atoms.cell[1]
+            translated_n_x_vectors[7 * i + 5] = v + atoms.cell[2]
+            translated_n_x_vectors[7 * i + 6] = v - atoms.cell[2]
+
         # Sort nitrogen to vertex atom vectors by length
         # Out of the shortest 8, choose the four vertex atoms farthest from the closest center atom in the apical dir.
-        nearest_eight_x_atoms = np.take(x_indices, np.argsort(all_distances[n_atom][x_indices]))[:8]
+        smallest_eight_n_x_vectors = translated_n_x_vectors[
+            np.argsort(np.linalg.norm(translated_n_x_vectors,axis=1))[:8]]
         nearest_c_atom = np.array(c_indices)[np.argsort(all_distances[n_atom][c_indices])][0]
-        c_to_nearest_eight_x_vectors = all_vectors[nearest_c_atom][nearest_eight_x_atoms]
+        c_to_nearest_eight_x_vectors = smallest_eight_n_x_vectors + all_vectors[nearest_c_atom][n_atom]
         c_to_nearest_eight_x_apical_vectors = np.outer(np.dot(c_to_nearest_eight_x_vectors, apical_direction),
                                                        apical_direction)
         c_to_nearest_eight_x_apical_distances = np.abs(np.linalg.norm(c_to_nearest_eight_x_apical_vectors, axis=1))
-        nearest_four_apical_x_indices = nearest_eight_x_atoms[np.argsort(c_to_nearest_eight_x_apical_distances)][-4:]
+        n_to_four_apical_x_vectors = smallest_eight_n_x_vectors[np.argsort(c_to_nearest_eight_x_apical_distances)[-4:]]
 
         # Save the mean distance from an N atom to the nearest 4 apical vertex atoms
-        n_to_x_dist.append(np.mean(all_distances[n_atom][nearest_four_apical_x_indices]))
+        n_to_x_dist.append(np.mean(np.linalg.norm(n_to_four_apical_x_vectors, axis=1)))
 
         # Get distance from N atom to nearest center atom in apical direction
         n_to_nearest_c_vector = all_vectors[n_atom][nearest_c_atom]
@@ -383,12 +401,11 @@ def get_penetration_distances(atoms, center_species, vertex_species, apical_dire
         n_to_nearest_c_apical_distance = np.linalg.norm(n_to_nearest_c_apical_vector)
         c_to_n_dist.append(n_to_nearest_c_apical_distance)
 
-        # Get the distance from the N atom to the 4 nearest vertex atoms that are within 1.5 Ang. of the N atom in the z-direction
-        n_to_nearest_four_apical_x_vectors = all_vectors[n_atom][nearest_four_apical_x_indices]
-        n_to_nearest_four_apical_x_apical_vectors = np.outer(np.dot(n_to_nearest_four_apical_x_vectors,
+        # Get the distance from the N atom to the 4 nearest vertex atoms in the apical direction
+        n_to_four_apical_x_apical_vectors = np.outer(np.dot(n_to_four_apical_x_vectors,
                                                                     apical_direction),
                                                              apical_direction)
-        n_to_x_apical_distances = np.linalg.norm(n_to_nearest_four_apical_x_apical_vectors, axis=1)
+        n_to_x_apical_distances = np.linalg.norm(n_to_four_apical_x_apical_vectors, axis=1)
 
         # Determine if the penetration distance is:
         # positive (N atom between apical vertex atoms and center atoms)
