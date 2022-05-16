@@ -331,7 +331,7 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
 
     return angle_data, distance_data
 
-def get_penetration_distances(atoms, center_species, vertex_species, apical_direction):
+def get_penetration_distances(atoms, center_species, vertex_species, apical_direction, n_atoms=None):
     '''
     Calculate the position of ammonium nitrogen atoms relative to other atoms:
         N to vertex distance: mean distance between each ammonium N atom and the 4 nearest vertex atoms
@@ -345,6 +345,8 @@ def get_penetration_distances(atoms, center_species, vertex_species, apical_dire
     :type vertex_species: str
     :param apical_direction: direction normal to the plane containing sheets of octahedra
     :type apical_direction: 3 element array
+    :param n_atoms: (optional) list of atom indices for the ammonium nitrogen atoms to analyze
+    :type n_atoms: list of int
     :return: N to vertex distances, N to center distance, penetration distances
     :rtype: tuple
     '''
@@ -363,7 +365,10 @@ def get_penetration_distances(atoms, center_species, vertex_species, apical_dire
     x_indices = [a.index for a in atoms if a.symbol == vertex_species]
     c_indices = [a.index for a in atoms if a.symbol == center_species]
 
-    for n_atom in find_ammonium_atoms(atoms):
+    if n_atoms is None:
+        n_atoms = find_ammonium_atoms(atoms)
+
+    for n_atom in n_atoms:
         # Need to use a supercell because an single atom index
         # may need to be used more than once, but in difference unit cells
         # First get all n-x distances
