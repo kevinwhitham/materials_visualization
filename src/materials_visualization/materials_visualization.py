@@ -755,9 +755,6 @@ def compare_relaxations(relaxation_summary):
     :return:
     :rtype:
     '''
-    plt.style.reload_library()
-    plt.rcdefaults()
-    plt.style.use(['acs'])
 
     # Plot relative change in volume
     fig = plt.gcf()
@@ -790,14 +787,7 @@ def compare_relaxations(relaxation_summary):
     plt.xticks([])
     plt.legend(loc='best', edgecolor='w', borderpad=0)
 
-    # Add panel labels
-    for i, label in enumerate(('a', 'b')):
-        ax = plt.subplot(1, 2, i + 1)
-        ax.text(-0.2, 1.1, label, transform=ax.transAxes,
-                fontsize=6, fontweight='bold', va='top', ha='right')
-
     plt.tight_layout()
-    plt.subplots_adjust(left=0)
 
 def get_vasp_runtimes(exclude_keyword=None):
     '''
