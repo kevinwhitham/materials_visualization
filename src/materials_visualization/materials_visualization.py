@@ -1113,8 +1113,6 @@ def plot_bands(e_mk,
     else:
         plt.title(f'Band {bands_to_highlight}')
 
-    plt.tight_layout()
-
 
 
 def plot_band_path(structure_file, band_path_str):
