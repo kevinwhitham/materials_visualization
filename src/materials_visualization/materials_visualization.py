@@ -348,7 +348,7 @@ def get_penetration_distances(atoms, center_species, vertex_species, apical_dire
     :param n_atoms: (optional) list of atom indices for the ammonium nitrogen atoms to analyze
     :type n_atoms: list of int
     :return: N to vertex distances, N to center distance, penetration distances
-    :rtype: tuple
+    :rtype: DataFrame
     '''
 
     # Get unit vector in apical direction
@@ -358,6 +358,7 @@ def get_penetration_distances(atoms, center_species, vertex_species, apical_dire
     n_to_x_dist = []
     c_to_n_dist = []
     n_to_apical_x_dist = []
+    n_to_3x_dist = []
 
     # Save static info about the crystal structure
     all_vectors = atoms.get_all_distances(mic=True, vector=True)
@@ -386,7 +387,11 @@ def get_penetration_distances(atoms, center_species, vertex_species, apical_dire
             translated_n_x_vectors[7 * i + 5] = v + atoms.cell[2]
             translated_n_x_vectors[7 * i + 6] = v - atoms.cell[2]
 
-        # Sort nitrogen to vertex atom vectors by length
+        # Get 3 closest X atoms to the N atom
+        smallest_three_n_x_vectors = translated_n_x_vectors[
+            np.argsort(np.linalg.norm(translated_n_x_vectors, axis=1))[:3]]
+        n_to_3x_dist.append(np.mean(np.linalg.norm(smallest_three_n_x_vectors, axis=1)))
+
         # Out of the shortest 8, choose the four vertex atoms farthest from the closest center atom in the apical dir.
         smallest_eight_n_x_vectors = translated_n_x_vectors[
             np.argsort(np.linalg.norm(translated_n_x_vectors,axis=1))[:8]]
@@ -426,7 +431,8 @@ def get_penetration_distances(atoms, center_species, vertex_species, apical_dire
 
     return pd.DataFrame(dict(n_to_x_distances=n_to_x_dist,
                              c_to_n_distances=c_to_n_dist,
-                             penetration_distances=n_to_apical_x_dist))
+                             penetration_distances=n_to_apical_x_dist,
+                             n_to_3x_distances=n_to_3x_dist))
 
 def vasp_to_trajectory(outcar_filenames, trajectory_filename):
     '''
