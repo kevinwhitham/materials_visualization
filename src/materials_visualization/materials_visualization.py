@@ -204,7 +204,21 @@ def plot_unit_cell_volume_change(trajectories, labels):
 
 def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, trajectory, plane_of_interest='xy'):
     '''
-    Plots the angle connecting octahedral centers over a trajectory.
+    Calculate angles and distances between atoms in octahedral coordination.
+    Returns two DataFrames:
+        angle_data:
+            step    index of the Trajectory or list of structures
+            angle   center-equitorial vertex-center angle
+            vertex_displacement distance from equitorial vertex to midpoint of center-center
+            atoms   indices of the atoms forming angle (center,vertex,center)
+            tilt_angle  angle between apical vertex atoms and normal of the plane of interest
+            tilt_atoms  indices of center atom and two apical vertex atoms
+            in_plane_angle  angle projected onto the plane of interest
+        distance_data:
+            step    index of the Trajectory or list of structures
+            distance    distance from center atom to equitorial vertex atom
+            atoms   indices of center and vertex atom separated by distance
+
     :param center_atom_symbol: name of atom at octahedral centers (e.g. 'Pb')
     :type center_atom_symbol: str
     :param vertex_atom_symbol: name of atom at octahedral vertices (e.g. 'I')
@@ -212,7 +226,7 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
     :param trajectory: ASE trajectory
     :param plane_of_interest: way to specify equitorial plane (e.g. 'xy')
     :type plane_of_interest: str
-    :return: tuple of DataFrame (angles, distances)
+    :return: two DataFrames (angle_data, distance_data)
     :rtype: tuple
     '''
 
