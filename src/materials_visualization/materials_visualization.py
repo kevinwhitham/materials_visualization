@@ -274,12 +274,8 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
                                                            apical_vertex_atom_indices[1],
                                                            mic=True,
                                                            vector=True)
-                        pb_pb_vector = atoms.get_distance(nearest_center_atom_index,
-                                                          center_atom_index,
-                                                          mic=True,
-                                                          vector=True)
+
                         apical_vector = apical_vector / np.linalg.norm(apical_vector)
-                        pb_pb_vector = pb_pb_vector / np.linalg.norm(pb_pb_vector)
                         ab_indices = np.setxor1d([0,1,2], [apical_axis])
                         ab_normal_vector = np.cross(atoms.cell[ab_indices[0]], atoms.cell[ab_indices[1]])
                         ab_normal_vector = ab_normal_vector / np.linalg.norm(ab_normal_vector)
@@ -303,11 +299,17 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
                         proj_vector_2 = proj_vector_2 / np.linalg.norm(proj_vector_2)
                         in_plane_angle = 180.0/np.pi * np.arccos(np.dot(proj_vector_1, proj_vector_2))
 
+                        # Calculate displacement of vertex atom from the midpoint of the center to center vector
+                        c_v_nc_angle = atoms.get_angle(center_atom_index,
+                                                       vertex_atom_index,
+                                                       nearest_center_atom_index,
+                                                       mic=True)
+                        c_nc_distance = all_distances[center_atom_index, nearest_center_atom_index]
+                        vertex_displacement = (c_nc_distance/2.0)/np.tan(c_v_nc_angle/2.0*np.pi/180.0)
+
                         angle_data = angle_data.append(pd.DataFrame(dict(step=step,
-                                                                         angle=atoms.get_angle(center_atom_index,
-                                                                                               vertex_atom_index,
-                                                                                               nearest_center_atom_index,
-                                                                                               mic=True),
+                                                                         angle=c_v_nc_angle,
+                                                                         vertex_displacement=vertex_displacement,
                                                                          atoms=','.join(map(str, [center_atom_index,
                                                                                                   vertex_atom_index,
                                                                                                   nearest_center_atom_index])),
