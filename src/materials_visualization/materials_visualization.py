@@ -374,6 +374,8 @@ def get_penetration_distances(atoms, center_species, vertex_species, apical_dire
     c_to_n_dist = []
     n_to_apical_x_dist = []
     n_to_3x_dist = []
+    three_x_indices=[]
+    n_to_eq_x_distance=[]
 
     # Save static info about the crystal structure
     all_vectors = atoms.get_all_distances(mic=True, vector=True)
@@ -385,9 +387,9 @@ def get_penetration_distances(atoms, center_species, vertex_species, apical_dire
         n_atoms = find_ammonium_atoms(atoms)
 
     for n_atom in n_atoms:
-        # Need to use a supercell because an single atom index
-        # may need to be used more than once, but in difference unit cells
-        # First get all n-x distances
+        # Need to use a supercell because an atom index
+        # may need to be used more than once, but in different unit cells
+        # First get all n-x vectors in one unit cell
         n_x_vectors = all_vectors[n_atom][x_indices]
 
         # Then get n-x distances to adjacent unit cells
@@ -402,15 +404,30 @@ def get_penetration_distances(atoms, center_species, vertex_species, apical_dire
             translated_n_x_vectors[7 * i + 5] = v + atoms.cell[2]
             translated_n_x_vectors[7 * i + 6] = v - atoms.cell[2]
 
+        nearest_c_atom = np.array(c_indices)[np.argsort(all_distances[n_atom][c_indices])][0]
+
         # Get 3 closest X atoms to the N atom
-        smallest_three_n_x_vectors = translated_n_x_vectors[
-            np.argsort(np.linalg.norm(translated_n_x_vectors, axis=1))[:3]]
+        smallest_three_n_x_vector_indices=np.argsort(np.linalg.norm(translated_n_x_vectors, axis=1))[:3]
+        smallest_three_n_x_vectors = translated_n_x_vectors[smallest_three_n_x_vector_indices]
         n_to_3x_dist.append(np.mean(np.linalg.norm(smallest_three_n_x_vectors, axis=1)))
+
+        # Determine the atom indices in the three smallest n to x distances
+        c_to_smallest_three_n_x_vectors=smallest_three_n_x_vectors + all_vectors[nearest_c_atom][n_atom]
+        c_to_smallest_three_n_x_apical_vectors=np.outer(np.dot(c_to_smallest_three_n_x_vectors, apical_direction),
+                                                        apical_direction)
+        smallest_three_c_to_x_apical_vector_indices=np.argsort(np.linalg.norm(c_to_smallest_three_n_x_apical_vectors, axis=1))
+        equitorial_x_index=x_indices[smallest_three_n_x_vector_indices[
+                                         smallest_three_c_to_x_apical_vector_indices][0]//7]
+        apical_x_indices=[x_indices[i//7] for i in
+                          smallest_three_n_x_vector_indices[smallest_three_c_to_x_apical_vector_indices]]
+        three_x_indices.append(dict(n_index=n_atom,
+                                    equitorial_x_index=equitorial_x_index,
+                                    apical_x_indices=apical_x_indices))
+        n_to_eq_x_distance.append(all_distances[n_atom][equitorial_x_index])
 
         # Out of the shortest 8, choose the four vertex atoms farthest from the closest center atom in the apical dir.
         smallest_eight_n_x_vectors = translated_n_x_vectors[
             np.argsort(np.linalg.norm(translated_n_x_vectors,axis=1))[:8]]
-        nearest_c_atom = np.array(c_indices)[np.argsort(all_distances[n_atom][c_indices])][0]
         c_to_nearest_eight_x_vectors = smallest_eight_n_x_vectors + all_vectors[nearest_c_atom][n_atom]
         c_to_nearest_eight_x_apical_vectors = np.outer(np.dot(c_to_nearest_eight_x_vectors, apical_direction),
                                                        apical_direction)
@@ -447,7 +464,9 @@ def get_penetration_distances(atoms, center_species, vertex_species, apical_dire
     return pd.DataFrame(dict(n_to_x_distances=n_to_x_dist,
                              c_to_n_distances=c_to_n_dist,
                              penetration_distances=n_to_apical_x_dist,
-                             n_to_3x_distances=n_to_3x_dist))
+                             n_to_3x_distances=n_to_3x_dist,
+                             three_x_indices=three_x_indices,
+                             n_to_equitorial_x_distances=n_to_eq_x_distance))
 
 def vasp_to_trajectory(outcar_filenames, trajectory_filename):
     '''
