@@ -202,44 +202,65 @@ def plot_unit_cell_volume_change(trajectories, labels):
     return fig
 
 
-def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, trajectory, plane_of_interest='xy'):
+def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, trajectory, apical_direction=None):
     '''
     Calculate angles and distances between atoms in octahedral coordination.
     Returns two DataFrames:
         angle_data:
-            step    index of the Trajectory or list of structures
-            angle   center-equitorial vertex-center angle
+            step                index of the Trajectory or list of structures
+            angle               center atom to equitorial vertex atom to center atom angle
             vertex_displacement distance from equitorial vertex to midpoint of center-center
-            atoms   indices of the atoms forming angle (center,vertex,center)
-            tilt_angle  angle between apical vertex atoms and normal of the plane of interest
-            tilt_atoms  indices of center atom and two apical vertex atoms
-            in_plane_angle  angle projected onto the plane of interest
+            first_center_atom_index     index of one of the octahedral center atoms
+            vertex_atom_index           index of the vertex atom
+            second_center_atom_index    index of the other octahedral center atom
+            in_plane_angle      angle projected onto the plane of interest
         distance_data:
             step    index of the Trajectory or list of structures
             distance    distance from center atom to equitorial vertex atom
-            atoms   indices of center and vertex atom separated by distance
-
+            center_atom_index   index of center atom
+            vertex_atom_index   index of vertex atom
+        tilt_data:
+            step        index of the Trajectory or list of structures
+            tilt_angle  angle between apical vertex atoms and normal of the plane of interest
+            center_atom_index           index of the atom at the octahedral center
+            first_apical_atom_index     index of one of the opical atoms
+            second_apical_atom_index    index of one of the apical atoms
     :param center_atom_symbol: name of atom at octahedral centers (e.g. 'Pb')
     :type center_atom_symbol: str
     :param vertex_atom_symbol: name of atom at octahedral vertices (e.g. 'I')
     :type vertex_atom_symbol: str
     :param trajectory: ASE trajectory
-    :param plane_of_interest: way to specify equitorial plane (e.g. 'xy')
-    :type plane_of_interest: str
-    :return: two DataFrames (angle_data, distance_data)
+    :param apical_direction: (1x3) or (nx3) vectors normal to the equitorial plane. (default=cell[0]xcell[1])
+    :type apical_direction: array
+    :return: DataFrames angle_data, distance_data, tilt_data
     :rtype: tuple
     '''
 
-    if 'x' not in plane_of_interest:
-        apical_axis = 0
-    elif 'y' not in plane_of_interest:
-        apical_axis = 1
-    else:
-        apical_axis = 2
 
-    # DataFrame to hold the angle data
+    # DataFrames to hold the data
     angle_data = pd.DataFrame()
     distance_data = pd.DataFrame()
+    tilt_data = pd.DataFrame()
+
+    if apical_direction is None:
+        # Guess the a-b plane is the equitorial plane
+        apical_direction=np.cross(atoms.cell[0], atoms.cell[1])
+    elif type(apical_direction) is list:
+        apical_direction=np.array(apical_direction)
+
+    apical_direction=np.reshape(apical_direction, (-1,3))
+
+    if apical_direction.shape[0] == 1:
+        # Use the one apical vector for every step in the trajectory
+        tmp=np.empty((len(trajectory),3))
+        np.copyto(tmp,apical_direction)
+        apical_direction=tmp
+    elif apical_direction.shape[0] != len(trajectory):
+        raise RuntimeError('apical_direction must be one vector or len(trajectory)')
+        return
+
+    # Make apical_direction a unit vector
+    apical_direction=apical_direction / np.linalg.norm(apical_direction, axis=1)
 
     # Step through the trajectory
     for step, atoms in enumerate(trajectory):
@@ -251,6 +272,7 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
         all_center_atom_indices = np.array([a.index for a in atoms if a.symbol == center_atom_symbol])
         all_vertex_atom_indices = np.array([a.index for a in atoms if a.symbol == vertex_atom_symbol])
         all_distances = atoms.get_all_distances(mic=True)
+        all_vectors=atoms.get_all_distances(mic=True, vector=True)
         second_center_atom_indices = all_center_atom_indices
 
         for center_atom_index in all_center_atom_indices:
@@ -259,18 +281,45 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
             second_center_atom_indices = np.delete(second_center_atom_indices,
                                                    np.argwhere(second_center_atom_indices == center_atom_index))
 
+            # Get the vertex atoms of the octahedron centered at center_atom_index
+            # Assume the nearest six vertex type atoms are the vertices
             vertex_atom_indices = all_vertex_atom_indices[
                                       np.argsort(all_distances[center_atom_index][all_vertex_atom_indices])][:6]
-            # print('vertex_atom_indices', vertex_atom_indices)
-            # Choose four vertices closest to the center in the apical direction
-            equitorial_vertex_atom_indices = vertex_atom_indices[np.argsort(
-                [np.abs(atoms.get_distance(center_atom_index, vertex_index, vector=True, mic=True)[apical_axis]) for
-                 vertex_index in vertex_atom_indices])][:4]
-            apical_vertex_atom_indices = vertex_atom_indices[np.argsort(
-                [np.abs(atoms.get_distance(center_atom_index, vertex_index, vector=True, mic=True)[apical_axis]) for
-                 vertex_index in vertex_atom_indices])][-2:]
 
-            # print('equitorial_vertex_atom_indices', equitorial_vertex_atom_indices)
+            def length_of_a_onto_b(a, b):
+                return np.linalg.norm(np.outer(np.dot(a,b),b))
+
+            # Sort the six octaheral vertex atoms by distance from the center atom in the apical direction
+            nearest_apical_sorted_vertex_atom_indices=vertex_atom_indices[np.argsort(
+                [length_of_a_onto_b(all_vectors[center_atom_index,vertex_index], apical_direction[step]) for
+                 vertex_index in vertex_atom_indices])]
+
+            # Get the four vertex atoms out of the six in this octahedron
+            # nearest the center atom in the apical direction
+            equitorial_vertex_atom_indices = nearest_apical_sorted_vertex_atom_indices[:4]
+
+            # Get the two vertex atoms of the six in this octahedron
+            # farthest from the center atom in the apical direction
+            apical_vertex_atom_indices = nearest_apical_sorted_vertex_atom_indices[-2:]
+
+            # Get tilt of octahedron relative to apical_direction[step]
+            octahedron_apical_vector = atoms.get_distance(apical_vertex_atom_indices[0],
+                                                          apical_vertex_atom_indices[1],
+                                                          mic=True,
+                                                          vector=True)
+
+            octahedron_apical_vector = octahedron_apical_vector / np.linalg.norm(octahedron_apical_vector)
+            tilt_angle = 180 / np.pi * np.arccos(np.dot(octahedron_apical_vector, apical_direction[step]))
+            tilt_angle = min(tilt_angle, abs(180 - tilt_angle))
+            tilt_data=tilt_data.append(pd.DataFrame(dict(step=step,
+                                                         tilt_angle=tilt_angle,
+                                                         center_atom_index=center_atom_index,
+                                                         first_apical_atom_index=apical_vertex_atom_indices[0],
+                                                         second_apical_atom_index=apical_vertex_atom_indices[1]),
+                                                    index=[0]),
+                                       ignore_index=True)
+
+            # Get the bond angle of center_atom_index with each equitorial vertex atom
             for vertex_atom_index in equitorial_vertex_atom_indices:
                 if len(second_center_atom_indices):
                     # Get nearest atom of type center_atom_symbol that is not center_atom_index
@@ -307,9 +356,9 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
                         center_atom_plane_normal = center_atom_plane_normal / np.linalg.norm(center_atom_plane_normal)
                         vector_1 = atoms.get_distance(vertex_atom_index, center_atom_index, mic=True, vector=True)
                         vector_2 = atoms.get_distance(vertex_atom_index, nearest_center_atom_index, mic=True, vector=True)
-                        proj_vector_1 = vector_1 - np.dot(vector_1, center_atom_plane_normal)*center_atom_plane_normal
+                        proj_vector_1 = vector_1 - np.dot(vector_1, apical_direction[step])*apical_direction[step]
                         proj_vector_1 = proj_vector_1 / np.linalg.norm(proj_vector_1)
-                        proj_vector_2 = vector_2 - np.dot(vector_2, center_atom_plane_normal)*center_atom_plane_normal
+                        proj_vector_2 = vector_2 - np.dot(vector_2, apical_direction[step])*apical_direction[step]
                         proj_vector_2 = proj_vector_2 / np.linalg.norm(proj_vector_2)
                         in_plane_angle = 180.0/np.pi * np.arccos(np.dot(proj_vector_1, proj_vector_2))
 
@@ -324,14 +373,9 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
                         angle_data = angle_data.append(pd.DataFrame(dict(step=step,
                                                                          angle=c_v_nc_angle,
                                                                          vertex_displacement=vertex_displacement,
-                                                                         atoms=','.join(map(str, [center_atom_index,
-                                                                                                  vertex_atom_index,
-                                                                                                  nearest_center_atom_index])),
-                                                                         tilt_angle=tilt_angle,
-                                                                         tilt_atoms=','.join(map(str,
-                                                                                                 [center_atom_index,
-                                                                                                  apical_vertex_atom_indices[0],
-                                                                                                  apical_vertex_atom_indices[1]])),
+                                                                         first_center_atom_index=center_atom_index,
+                                                                         second_center_atom_index=nearest_center_atom_index,
+                                                                         vertex_atom_index=vertex_atom_index,
                                                                          in_plane_angle=in_plane_angle),
                                                                     index=[0]),
                                                        ignore_index=True)
@@ -339,12 +383,12 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
                 distance_data = distance_data.append(pd.DataFrame(dict(step=step,
                                                                        distance=all_distances[center_atom_index][
                                                                            vertex_atom_index],
-                                                                       atoms=','.join(map(str, [center_atom_index,
-                                                                                                vertex_atom_index]))),
+                                                                       center_atom_index=center_atom_index,
+                                                                       vertex_atom_index=vertex_atom_index),
                                                                   index=[0]),
                                                      ignore_index=True)
 
-    return angle_data, distance_data
+    return angle_data, distance_data, tilt_data
 
 def get_penetration_distances(atoms, center_species, vertex_species, apical_direction, n_atoms=None):
     '''
