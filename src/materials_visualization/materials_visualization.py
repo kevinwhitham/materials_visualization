@@ -244,7 +244,7 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
 
     if apical_direction is None:
         # Guess the a-b plane is the equitorial plane
-        apical_direction=np.cross(atoms.cell[0], atoms.cell[1])
+        apical_direction=np.array([np.cross(atoms.cell[0], atoms.cell[1]) for atoms in trajectory])
     elif type(apical_direction) is list:
         apical_direction=np.array(apical_direction)
 
