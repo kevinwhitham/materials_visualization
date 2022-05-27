@@ -333,27 +333,9 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
                     # print('distance_sorted_center_atom_indices', distance_sorted_center_atom_indices)
                     nearest_center_atom_index = distance_sorted_center_atom_indices[0]
                     if any(nearest_center_atom_index == second_center_atom_indices):
-                        apical_vector = atoms.get_distance(apical_vertex_atom_indices[0],
-                                                           apical_vertex_atom_indices[1],
-                                                           mic=True,
-                                                           vector=True)
-
-                        apical_vector = apical_vector / np.linalg.norm(apical_vector)
-                        ab_indices = np.setxor1d([0,1,2], [apical_axis])
-                        ab_normal_vector = np.cross(atoms.cell[ab_indices[0]], atoms.cell[ab_indices[1]])
-                        ab_normal_vector = ab_normal_vector / np.linalg.norm(ab_normal_vector)
-                        tilt_angle = 180/np.pi * np.arccos(np.dot(apical_vector, ab_normal_vector))
-                        tilt_angle = min(tilt_angle, abs(180-tilt_angle))
 
                         # Calculate the in-plane angle by projecting the vertex atom onto
                         # a plane defined by the center atom in adjacent unit cells
-                        center_atom_position = atoms.positions[center_atom_index]
-                        center_atom_plane_points = np.array([center_atom_position,
-                                                             center_atom_position + atoms.cell[ab_indices[0]],
-                                                             center_atom_position + atoms.cell[ab_indices[1]]])
-                        center_atom_plane_normal = np.cross(center_atom_plane_points[1]-center_atom_plane_points[0],
-                                                            center_atom_plane_points[2]-center_atom_plane_points[0])
-                        center_atom_plane_normal = center_atom_plane_normal / np.linalg.norm(center_atom_plane_normal)
                         vector_1 = atoms.get_distance(vertex_atom_index, center_atom_index, mic=True, vector=True)
                         vector_2 = atoms.get_distance(vertex_atom_index, nearest_center_atom_index, mic=True, vector=True)
                         proj_vector_1 = vector_1 - np.dot(vector_1, apical_direction[step])*apical_direction[step]
@@ -672,7 +654,7 @@ def plot_trajectory_angles_and_distances(traj, atom1, atom2, label):
     '''
 
     # Plot Pb-I-Pb angles and distances
-    angle_data, distance_data = get_octahedral_angles_and_distances(atom1, atom2, traj)
+    angle_data, distance_data, tilt_data = get_octahedral_angles_and_distances(atom1, atom2, traj)
 
     fig = plt.gcf()
     if fig is None:
@@ -787,7 +769,7 @@ def plot_vasp_relaxations(exclude_keywords=[], convergence_steps=10, fmax_target
         # Concatenate sorted OUTCAR files into one trajectory
         traj = mv.vasp_to_trajectory(files, path + 'vasp_relaxation.traj')
 
-        angle_data, distance_data = mv.get_octahedral_angles_and_distances('Pb', 'I', traj[-1:])
+        angle_data, distance_data, tilt_data = get_octahedral_angles_and_distances('Pb', 'I', traj[-1:])
         pb_i_pb_angle = np.mean(angle_data['angle'])
         relaxation_summary = relaxation_summary.append(pd.DataFrame(
             dict(delta_volume_pct=(traj[-1].cell.volume - traj[0].cell.volume) / traj[0].cell.volume * 100.0,
