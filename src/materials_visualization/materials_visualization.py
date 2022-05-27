@@ -402,6 +402,7 @@ def get_penetration_distances(atoms, center_species, vertex_species, apical_dire
     n_to_3x_dist = []
     three_x_indices=[]
     n_to_eq_x_distance=[]
+    eq_x_to_n_to_c_centroid_angles=[]
 
     # Save static info about the crystal structure
     all_vectors = atoms.get_all_distances(mic=True, vector=True)
@@ -487,12 +488,38 @@ def get_penetration_distances(atoms, center_species, vertex_species, apical_dire
         # Save the mean z-distance from an N atom to the nearest 4 axial I atoms
         n_to_apical_x_dist.append(np.mean(n_to_x_apical_distances))
 
+        # Determine centroid of the four center atoms nearest the N atom
+        # Create a supercell because the N atom may coordinate with a C atom in the unit cell at distance d1
+        # and also coordinate with the same C atom in an adjacent unit cell at distance d2
+        n_c_vectors=all_vectors[n_atom][c_indices]
+        translated_n_c_vectors = np.empty((len(n_c_vectors) * 7, 3))
+        for i, v in enumerate(n_c_vectors):
+            # Add vectors from n_atom to x atoms translated to unit cells +/- in a,b,c
+            translated_n_c_vectors[7 * i] = v
+            translated_n_c_vectors[7 * i + 1] = v + atoms.cell[0]
+            translated_n_c_vectors[7 * i + 2] = v - atoms.cell[0]
+            translated_n_c_vectors[7 * i + 3] = v + atoms.cell[1]
+            translated_n_c_vectors[7 * i + 4] = v - atoms.cell[1]
+            translated_n_c_vectors[7 * i + 5] = v + atoms.cell[2]
+            translated_n_c_vectors[7 * i + 6] = v - atoms.cell[2]
+
+        # Find four c atoms nearest the n atom
+        smallest_four_n_c_vectors=translated_n_c_vectors[
+            np.argsort(np.linalg.norm(translated_n_c_vectors, axis=1))][:4]
+        n_to_nearest_c_atoms_centroid_vector=np.mean(smallest_four_n_c_vectors, axis=0)
+        eq_x_to_n_to_c_centroid_angle=180.0/np.pi*np.arccos(np.dot(all_vectors[n_atom][equitorial_x_index],
+                                                                   n_to_nearest_c_atoms_centroid_vector)/
+                                                            (all_distances[n_atom][equitorial_x_index]* \
+                                                             np.linalg.norm(n_to_nearest_c_atoms_centroid_vector)))
+        eq_x_to_n_to_c_centroid_angles.append(eq_x_to_n_to_c_centroid_angle)
+
     return pd.DataFrame(dict(n_to_x_distances=n_to_x_dist,
                              c_to_n_distances=c_to_n_dist,
                              penetration_distances=n_to_apical_x_dist,
                              n_to_3x_distances=n_to_3x_dist,
                              three_x_indices=three_x_indices,
-                             n_to_equitorial_x_distances=n_to_eq_x_distance))
+                             n_to_equitorial_x_distances=n_to_eq_x_distance,
+                             eq_x_to_n_to_c_centroid_angles=eq_x_to_n_to_c_centroid_angles))
 
 def vasp_to_trajectory(outcar_filenames, trajectory_filename):
     '''
