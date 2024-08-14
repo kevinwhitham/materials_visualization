@@ -208,15 +208,15 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
     Returns two DataFrames:
         angle_data:
             step                index of the Trajectory or list of structures
-            angle               center atom to equitorial vertex atom to center atom angle
-            vertex_displacement distance from equitorial vertex to midpoint of center-center
+            angle               center atom to equatorial vertex atom to center atom angle
+            vertex_displacement distance from equatorial vertex to midpoint of center-center
             first_center_atom_index     index of one of the octahedral center atoms
             vertex_atom_index           index of the vertex atom
             second_center_atom_index    index of the other octahedral center atom
             in_plane_angle      angle projected onto the plane of interest
         distance_data:
-            step    index of the Trajectory or list of structures
-            distance    distance from center atom to equitorial vertex atom
+            step        index of the Trajectory or list of structures
+            distance    distance from center atom to equatorial vertex atom
             center_atom_index   index of center atom
             vertex_atom_index   index of vertex atom
         tilt_data:
@@ -230,7 +230,7 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
     :param vertex_atom_symbol: name of atom at octahedral vertices (e.g. 'I')
     :type vertex_atom_symbol: str
     :param trajectory: ASE trajectory
-    :param apical_direction: (1x3) or (nx3) vectors normal to the equitorial plane. (default=cell[0]xcell[1])
+    :param apical_direction: (1x3) or (nx3) vectors normal to the equatorial plane. (default=cell[0]xcell[1])
     :type apical_direction: array
     :return: DataFrames angle_data, distance_data, tilt_data
     :rtype: tuple
@@ -243,7 +243,7 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
     tilt_data = pd.DataFrame()
 
     if apical_direction is None:
-        # Guess the a-b plane is the equitorial plane
+        # Guess the a-b plane is the equatorial plane
         apical_direction=np.array([np.cross(atoms.cell[0], atoms.cell[1]) for atoms in trajectory])
     elif type(apical_direction) is list:
         apical_direction=np.array(apical_direction)
@@ -296,7 +296,7 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
 
             # Get the four vertex atoms out of the six in this octahedron
             # nearest the center atom in the apical direction
-            equitorial_vertex_atom_indices = nearest_apical_sorted_vertex_atom_indices[:4]
+            equatorial_vertex_atom_indices = nearest_apical_sorted_vertex_atom_indices[:4]
 
             # Get the two vertex atoms of the six in this octahedron
             # farthest from the center atom in the apical direction
@@ -319,8 +319,8 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
                                                     index=[0]),
                                        ignore_index=True)
 
-            # Get the bond angle of center_atom_index with each equitorial vertex atom
-            for vertex_atom_index in equitorial_vertex_atom_indices:
+            # Get the bond angle of center_atom_index with each equatorial vertex atom
+            for vertex_atom_index in equatorial_vertex_atom_indices:
                 if len(second_center_atom_indices):
                     # Get nearest atom of type center_atom_symbol that is not center_atom_index
                     # print('center_atom_index', center_atom_index)
@@ -443,14 +443,14 @@ def get_penetration_distances(atoms, center_species, vertex_species, apical_dire
         c_to_smallest_three_n_x_apical_vectors=np.outer(np.dot(c_to_smallest_three_n_x_vectors, apical_direction),
                                                         apical_direction)
         smallest_three_c_to_x_apical_vector_indices=np.argsort(np.linalg.norm(c_to_smallest_three_n_x_apical_vectors, axis=1))
-        equitorial_x_index=x_indices[smallest_three_n_x_vector_indices[
+        equatorial_x_index=x_indices[smallest_three_n_x_vector_indices[
                                          smallest_three_c_to_x_apical_vector_indices][0]//7]
         apical_x_indices=[x_indices[i//7] for i in
                           smallest_three_n_x_vector_indices[smallest_three_c_to_x_apical_vector_indices]]
         three_x_indices.append(dict(n_index=n_atom,
-                                    equitorial_x_index=equitorial_x_index,
+                                    equatorial_x_index=equatorial_x_index,
                                     apical_x_indices=apical_x_indices))
-        n_to_eq_x_distance.append(all_distances[n_atom][equitorial_x_index])
+        n_to_eq_x_distance.append(all_distances[n_atom][equatorial_x_index])
 
         # Out of the shortest 8, choose the four vertex atoms farthest from the closest center atom in the apical dir.
         smallest_eight_n_x_vectors = translated_n_x_vectors[
@@ -507,9 +507,9 @@ def get_penetration_distances(atoms, center_species, vertex_species, apical_dire
         smallest_four_n_c_vectors=translated_n_c_vectors[
             np.argsort(np.linalg.norm(translated_n_c_vectors, axis=1))][:4]
         n_to_nearest_c_atoms_centroid_vector=np.mean(smallest_four_n_c_vectors, axis=0)
-        eq_x_to_n_to_c_centroid_angle=180.0/np.pi*np.arccos(np.dot(all_vectors[n_atom][equitorial_x_index],
+        eq_x_to_n_to_c_centroid_angle=180.0/np.pi*np.arccos(np.dot(all_vectors[n_atom][equatorial_x_index],
                                                                    n_to_nearest_c_atoms_centroid_vector)/
-                                                            (all_distances[n_atom][equitorial_x_index]* \
+                                                            (all_distances[n_atom][equatorial_x_index]* \
                                                              np.linalg.norm(n_to_nearest_c_atoms_centroid_vector)))
         eq_x_to_n_to_c_centroid_angles.append(eq_x_to_n_to_c_centroid_angle)
 
@@ -518,7 +518,7 @@ def get_penetration_distances(atoms, center_species, vertex_species, apical_dire
                              penetration_distances=n_to_apical_x_dist,
                              n_to_3x_distances=n_to_3x_dist,
                              three_x_indices=three_x_indices,
-                             n_to_equitorial_x_distances=n_to_eq_x_distance,
+                             n_to_equatorial_x_distances=n_to_eq_x_distance,
                              eq_x_to_n_to_c_centroid_angles=eq_x_to_n_to_c_centroid_angles))
 
 def vasp_to_trajectory(outcar_filenames, trajectory_filename):
@@ -689,6 +689,8 @@ def plot_trajectory_angles_and_distances(traj, atom1, atom2, label):
 
     ax = plt.subplot(2,1,1)
     angle_data.pivot(index='step', columns='atoms', values='angle').plot(ax=ax)
+    # Plot the mean angle
+    angle_data.pivot(index='step', columns='atoms', values='angle').mean(axis=1).plot(ax=ax, style='--')
     plt.title(label)
     #plt.legend(title='Angle No.', loc='center left', bbox_to_anchor=(1, 0.5))
     plt.gca().get_legend().remove()
@@ -1247,3 +1249,24 @@ def plot_band_path(structure_file, band_path_str):
             file.write(f'{p}: {bp.special_points[p]}\n')
 
     return fig
+
+def plot_pdos(calc, species, species_orbitals, smoothing_width=0.05, npts=601, energy_limits=None, soc=False):
+    '''
+
+    :param calc: band structure calculator
+    :type calc: GPAW
+    :param species: atomic species to plot e.g. ['Pb', 'I']
+    :type species: list of str
+    :param species_orbitals: orbitals to plot, same length as species e.g. ['sp', 'p']
+    :type species_orbitals: list of str
+    :param smoothing_width: passed to GPAW row_dos method, smooths the curves
+    :type smoothing_width: float
+    :param npts: number of data points in the energy dimension to calculate
+    :type npts: int
+    :param energy_limits: min and max energy to plot
+    :type energy_limits: 2-tuple of float
+    :param soc:
+    :type soc:
+    :return:
+    :rtype:
+    '''
