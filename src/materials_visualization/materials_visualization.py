@@ -205,7 +205,7 @@ def plot_unit_cell_volume_change(trajectories, labels):
 def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, trajectory, apical_direction=None):
     '''
     Calculate angles and distances between atoms in octahedral coordination.
-    Returns two DataFrames:
+    Returns DataFrames:
         angle_data:
             step                index of the Trajectory or list of structures
             angle               center atom to equatorial vertex atom to center atom angle
