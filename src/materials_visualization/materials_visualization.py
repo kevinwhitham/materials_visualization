@@ -388,7 +388,12 @@ def get_penetration_distances(atoms, center_species, vertex_species, apical_dire
     :type apical_direction: 3 element array
     :param n_atoms: (optional) list of atom indices for the ammonium nitrogen atoms to analyze
     :type n_atoms: list of int
-    :return: N to vertex distances, N to center distance, penetration distances
+    :return:    n_to_x_dist: for each n-atom, the mean distance from n to the nearest four apical vertex atoms 
+    :           c_to_n_dist: distance in the apical direction from each n-atom to the nearest center atom 
+    :           n_to_3x_dist: for each n-atom, the mean distance to the nearest 3 vertex atoms 
+    :           three_x_indices: 
+    :           n_to_eq_x_distance
+    :           eq_x_to_n_to_c_centroid_angles
     :rtype: DataFrame
     '''
 
@@ -439,10 +444,17 @@ def get_penetration_distances(atoms, center_species, vertex_species, apical_dire
         n_to_3x_dist.append(np.mean(np.linalg.norm(smallest_three_n_x_vectors, axis=1)))
 
         # Determine the atom indices in the three smallest n to x distances
+        # these 3 vectors are from a center atom to the three vertex atoms closest to the n atom.
         c_to_smallest_three_n_x_vectors=smallest_three_n_x_vectors + all_vectors[nearest_c_atom][n_atom]
+
+        # these 3 vectors are the apical component of the vectors from the nearest center atom to the 3 vertex atoms nearest the n atom 
         c_to_smallest_three_n_x_apical_vectors=np.outer(np.dot(c_to_smallest_three_n_x_vectors, apical_direction),
                                                         apical_direction)
+
         smallest_three_c_to_x_apical_vector_indices=np.argsort(np.linalg.norm(c_to_smallest_three_n_x_apical_vectors, axis=1))
+        
+        # Here we get the index of the x atom that is closest to the center atom in the apical direction from the 3 vertex atoms closest to the n atom
+        # This is not neccessarily an equatorial vertex, simply the one closest to the equatorial plane of the 3 near the n-atom
         equatorial_x_index=x_indices[smallest_three_n_x_vector_indices[
                                          smallest_three_c_to_x_apical_vector_indices][0]//7]
         apical_x_indices=[x_indices[i//7] for i in
