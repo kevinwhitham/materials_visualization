@@ -391,7 +391,10 @@ def get_penetration_distances(atoms, center_species, vertex_species, apical_dire
     :return:    n_to_x_dist: for each n-atom, the mean distance from n to the nearest four apical vertex atoms 
     :           c_to_n_dist: distance in the apical direction from each n-atom to the nearest center atom 
     :           n_to_3x_dist: for each n-atom, the mean distance to the nearest 3 vertex atoms 
-    :           three_x_indices: 
+    :           three_x_indices: for each n-atom, the indices of the three nearest x atoms, separated as one equatorial and two apical.
+    :                            The equatorial x atom is simply the closest of the 3 x atoms to the plane of center atoms.
+    :                            There is no check to verify if the atoms are actually equatorial or apical.
+    :                            format is dict(n_index, equatorial_x_index, apical_x_indices)
     :           n_to_eq_x_distance
     :           eq_x_to_n_to_c_centroid_angles
     :rtype: DataFrame
@@ -458,7 +461,7 @@ def get_penetration_distances(atoms, center_species, vertex_species, apical_dire
         equatorial_x_index=x_indices[smallest_three_n_x_vector_indices[
                                          smallest_three_c_to_x_apical_vector_indices][0]//7]
         apical_x_indices=[x_indices[i//7] for i in
-                          smallest_three_n_x_vector_indices[smallest_three_c_to_x_apical_vector_indices]]
+                smallest_three_n_x_vector_indices[smallest_three_c_to_x_apical_vector_indices[1::]]]
         three_x_indices.append(dict(n_index=n_atom,
                                     equatorial_x_index=equatorial_x_index,
                                     apical_x_indices=apical_x_indices))
