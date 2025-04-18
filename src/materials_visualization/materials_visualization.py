@@ -201,6 +201,8 @@ def plot_unit_cell_volume_change(trajectories, labels):
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     return fig
 
+def length_of_a_onto_b(a, b):
+    return np.linalg.norm(np.outer(np.dot(a,b),b)) 
 
 def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, trajectory, apical_direction=None):
     '''
@@ -286,8 +288,8 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
             vertex_atom_indices = all_vertex_atom_indices[
                                       np.argsort(all_distances[center_atom_index][all_vertex_atom_indices])][:6]
 
-            def length_of_a_onto_b(a, b):
-                return np.linalg.norm(np.outer(np.dot(a,b),b))
+            
+            
 
             # Sort the six octaheral vertex atoms by distance from the center atom in the apical direction
             nearest_apical_sorted_vertex_atom_indices=vertex_atom_indices[np.argsort(
@@ -810,6 +812,15 @@ def plot_vasp_relaxations(exclude_keywords=[], convergence_steps=10, fmax_target
             incar = file.read()
             print(incar)
 
+        # To calculate the layer height of layered materials, we will assume the layer is parallel to a face of the cell
+        # This layer plane should be the cross-product of the two smallest cell vectors.
+        def get_layer_height(cell):
+            cell_vectors_sorted_by_length = cell[np.argsort(np.linalg.norm(cell, axis=1))]
+            layer_plane_vectors = cell_vectors_sorted_by_length[:2]
+            layer_direction = np.cross(layer_plane_vectors[0], layer_plane_vectors[1])
+            layer_direction = layer_direction / np.linalg.norm(layer_direction)
+            return length_of_a_onto_b(cell_vectors_sorted_by_length[-1], layer_direction)
+
         # Concatenate sorted OUTCAR files into one trajectory
         traj = mv.vasp_to_trajectory(files, path + 'vasp_relaxation.traj')
 
@@ -820,6 +831,8 @@ def plot_vasp_relaxations(exclude_keywords=[], convergence_steps=10, fmax_target
                  fmax_final=np.max(np.linalg.norm(traj[-1].get_forces(), axis=1)),
                  functional=label,
                  pb_i_pb_angle=pb_i_pb_angle,
+                 layer_height_initial = get_layer_height(traj[0].cell),
+                 layer_height_final = get_layer_height(traj[-1].cell),
                  a_vector_delta_pct=(traj[-1].cell.cellpar()[0] - traj[0].cell.cellpar()[0]) / traj[0].cell.cellpar()[
                      0] * 100.0,
                  b_vector_delta_pct=(traj[-1].cell.cellpar()[1] - traj[0].cell.cellpar()[1]) / traj[0].cell.cellpar()[
