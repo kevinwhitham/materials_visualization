@@ -262,7 +262,7 @@ def get_octahedral_angles_and_distances(center_atom_symbol, vertex_atom_symbol, 
         return
 
     # Make apical_direction a unit vector
-    apical_direction=apical_direction / np.linalg.norm(apical_direction, axis=1)
+    apical_direction = apical_direction / np.linalg.norm(apical_direction, axis=1, keepdims=True)
 
     # Step through the trajectory
     for step, atoms in enumerate(trajectory):
