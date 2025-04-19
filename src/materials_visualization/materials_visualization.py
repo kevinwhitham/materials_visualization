@@ -705,9 +705,9 @@ def plot_trajectory_angles_and_distances(traj, atom1, atom2, label):
         fig, axes = plt.subplots(2,1)
 
     ax = plt.subplot(2,1,1)
-    angle_data.pivot(index='step', columns='atoms', values='angle').plot(ax=ax)
+    angle_data.pivot(index='step', columns=['first_center_atom_index','vertex_atom_index','second_center_atom_index'], values='angle').plot(ax=ax)
     # Plot the mean angle
-    angle_data.pivot(index='step', columns='atoms', values='angle').mean(axis=1).plot(ax=ax, style='--')
+    angle_data.pivot(index='step', columns=['first_center_atom_index','vertex_atom_index','second_center_atom_index'], values='angle').mean(axis=1).plot(ax=ax, style='--')
     plt.title(label)
     #plt.legend(title='Angle No.', loc='center left', bbox_to_anchor=(1, 0.5))
     plt.gca().get_legend().remove()
@@ -718,7 +718,7 @@ def plot_trajectory_angles_and_distances(traj, atom1, atom2, label):
           angle_data.query(f'step=={angle_data["step"].max()}')['angle'].std())
 
     ax = plt.subplot(2,1,2, sharex=ax)
-    distance_data.pivot(index='step', columns='atoms', values='distance').plot(ax=ax)
+    distance_data.pivot(index='step', columns=['center_atom_index','vertex_atom_index'], values='distance').plot(ax=ax)
     #plt.legend(title='Bond No.', loc='center left', bbox_to_anchor=(1, 0.5))
     plt.gca().get_legend().remove()
     plt.xlabel('Step')
