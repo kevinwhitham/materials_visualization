@@ -829,6 +829,7 @@ def plot_vasp_relaxations(exclude_keywords=[], convergence_steps=10, fmax_target
         relaxation_summary = relaxation_summary.append(pd.DataFrame(
             dict(delta_volume_pct=(traj[-1].cell.volume - traj[0].cell.volume) / traj[0].cell.volume * 100.0,
                  fmax_final=np.max(np.linalg.norm(traj[-1].get_forces(), axis=1)),
+                 final_energy = traj[-1].get_potential_energy(),
                  functional=label,
                  pb_i_pb_angle=pb_i_pb_angle,
                  layer_height_initial = get_layer_height(traj[0].cell),
@@ -864,16 +865,26 @@ def plot_vasp_relaxations(exclude_keywords=[], convergence_steps=10, fmax_target
 
     return relaxation_summary
 
-def compare_relaxations(relaxation_summary):
+
+# backwards compatible call
+def compare_relaxations(relaxation_summary, field='delta_volume_pct'):
+    return plot_relaxation_change(categories = relaxation_summary['functional'], values = relaxation_summary[field])
+
+def plot_relaxation_change(categories, values):
     '''
-    Bar plot comparison of change in volume after relaxation by different functionals.
-    :param relaxation_summary: contains delta_volume_pct, functional
-    :type relaxation_summary: DataFrame
+    Creates two bar plots, one with absolute values.
+    :param categories: labels for each value
+    :type relaxation_summary: sequence
+    :param field: values to plot 
+    :type field: sequence
     :return:
     :rtype:
     '''
+    
+    categories = list(categories)
+    values = np.array(values)
+    assert len(categories) == len(values)
 
-    # Plot relative change in volume
     fig = plt.gcf()
     if fig is None:
         plt.subplots(1, 2)
@@ -881,25 +892,21 @@ def compare_relaxations(relaxation_summary):
     plt.subplot(1, 2, 2)
     plt.gca().grid(axis='y', linewidth=0.5)
     plt.gca().set_axisbelow(True)
-    for i in relaxation_summary.index:
-        plt.bar(x=i, height=relaxation_summary.iloc[i]['delta_volume_pct'],
-                label=relaxation_summary.iloc[i]['functional'],
-                yerr=relaxation_summary.iloc[i]['volume_delta_pct_std'])
+    for i in range(len(categories)):
+        plt.bar(x=i, height=values[i], label=categories[i])
     plt.axhline(y=0, color='grey', linewidth=0.5)
-    plt.ylabel('$\Delta V_0$ (%)')
+    plt.ylabel(None)
     plt.xlabel(None)
     plt.xticks([])
 
-    # Plot absolute change in volume
+    # Plot absolute values 
     plt.subplot(1, 2, 1)
     plt.gca().grid(axis='y', linewidth=0.5)
     plt.gca().set_axisbelow(True)
-    for i in relaxation_summary.index:
-        plt.bar(x=i, height=abs(relaxation_summary.iloc[i]['delta_volume_pct']),
-                label=relaxation_summary.iloc[i]['functional'],
-                yerr=relaxation_summary.iloc[i]['volume_delta_pct_std'])
+    for i in range(len(categories)):
+        plt.bar(x=i, height=abs(values[i]), label=categories[i])
     plt.axhline(y=0, color='grey', linewidth=0.5)
-    plt.ylabel('$| \Delta V_0 |$ (%)')
+    plt.ylabel(None)
     plt.xlabel(None)
     plt.xticks([])
     plt.legend(loc='best', edgecolor='w', borderpad=0)
